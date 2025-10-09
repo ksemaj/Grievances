@@ -1,3 +1,3 @@
-# This is just a simple grievance portal for my partner.
+# This is just a simple "grievance portal" for my partner.
 
-[Deployed with Vercel.](https://vercel.com)
+[Deployed with Vercel](https://vercel.com)
