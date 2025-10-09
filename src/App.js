@@ -41,12 +41,12 @@ export default function GrievancePortal() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <AlertCircle className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Official Grievance Portal</h1>
-          <p className="text-gray-600">Your concerns matter. File them here.</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">a grievance portal for my baby.</h1>
+          <p className="text-gray-600">i love you. please file your complaints here.</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">Submit New Grievance</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-gray-800">submit grievance here</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
