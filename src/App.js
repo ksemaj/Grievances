@@ -1,30 +1,77 @@
-import React, { useState } from 'react';
-import { AlertCircle, Send, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { AlertCircle, Send, Trash2, RefreshCw } from 'lucide-react';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
 
 export default function GrievancePortal() {
   const [grievances, setGrievances] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     severity: 'minor'
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // Load grievances from database
+  const loadGrievances = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('grievances')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error loading grievances:', error);
+    } else {
+      setGrievances(data);
+    }
+    setLoading(false);
+  };
+
+  // Load grievances when component mounts
+  useEffect(() => {
+    loadGrievances();
+  }, []);
+
+  const handleSubmit = async () => {
     if (formData.title.trim() && formData.description.trim()) {
       const newGrievance = {
-        id: Date.now(),
-        ...formData,
-        date: new Date().toLocaleDateString(),
+        title: formData.title,
+        description: formData.description,
+        severity: formData.severity,
         status: 'Under Review'
       };
-      setGrievances([newGrievance, ...grievances]);
-      setFormData({ title: '', description: '', severity: 'minor' });
+
+      const { error } = await supabase
+        .from('grievances')
+        .insert([newGrievance]);
+
+      if (error) {
+        console.error('Error submitting grievance:', error);
+        alert('Failed to submit grievance. Please try again.');
+      } else {
+        setFormData({ title: '', description: '', severity: 'minor' });
+        loadGrievances(); // Reload to show new grievance
+      }
     }
   };
 
-  const deleteGrievance = (id) => {
-    setGrievances(grievances.filter(g => g.id !== id));
+  const deleteGrievance = async (id) => {
+    const { error } = await supabase
+      .from('grievances')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting grievance:', error);
+    } else {
+      loadGrievances(); // Reload after deletion
+    }
   };
 
   const getSeverityColor = (severity) => {
@@ -41,23 +88,23 @@ export default function GrievancePortal() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <AlertCircle className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">a grievance portal for my baby.</h1>
-          <p className="text-gray-600">i love you. please file your complaints here.</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Ally's Grievance Portal</h1>
+          <p className="text-gray-600">I love you. Please tell me how you feel.</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">submit grievance here</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-800">Submit New Grievance</h2>
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                The Incident..
+                The Incident...
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., Baited me in VALORANT"
+                placeholder="e.g., Left dirty dishes in sink"
               />
             </div>
 
@@ -90,22 +137,33 @@ export default function GrievancePortal() {
             </div>
 
             <button
-              type="submit"
+              onClick={handleSubmit}
               className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2"
             >
               <Send size={20} />
               Submit Grievance
             </button>
-          </form>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-            Filed Grievances ({grievances.length})
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold text-gray-800">
+              Filed Grievances ({grievances.length})
+            </h2>
+            <button
+              onClick={loadGrievances}
+              className="text-purple-600 hover:text-purple-700 flex items-center gap-2"
+            >
+              <RefreshCw size={20} />
+              Refresh
+            </button>
+          </div>
           
-          {grievances.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No grievances filed yet. Things are okay. ❤️</p>
+          {loading ? (
+            <p className="text-gray-500 text-center py-8">Loading grievances...</p>
+          ) : grievances.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No grievances filed yet. Things are ok. ❤️</p>
           ) : (
             <div className="space-y-4">
               {grievances.map((grievance) => (
@@ -127,7 +185,7 @@ export default function GrievancePortal() {
                     <span className="font-semibold uppercase">
                       {grievance.severity} • {grievance.status}
                     </span>
-                    <span>{grievance.date}</span>
+                    <span>{new Date(grievance.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))}
