@@ -50,20 +50,20 @@ export default function GrievancePortal() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Grievance Title
+                The Incident..
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., Left dirty dishes in sink"
+                placeholder="e.g., Baited me in VALORANT"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Detailed Description
+                Your point of view
               </label>
               <textarea
                 value={formData.description}
@@ -105,7 +105,7 @@ export default function GrievancePortal() {
           </h2>
           
           {grievances.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No grievances filed yet. All is well! 🌟</p>
+            <p className="text-gray-500 text-center py-8">No grievances filed yet. Things are well! 🌟</p>
           ) : (
             <div className="space-y-4">
               {grievances.map((grievance) => (
