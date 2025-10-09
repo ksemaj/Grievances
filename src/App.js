@@ -89,7 +89,7 @@ export default function GrievancePortal() {
         <div className="text-center mb-8">
           <AlertCircle className="w-16 h-16 mx-auto mb-4 text-purple-600" />
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Ally's Grievance Portal</h1>
-          <p className="text-gray-600">I love you. Please tell me how you feel.</p>
+          <p className="text-gray-600">Please tell me how you feel.</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
