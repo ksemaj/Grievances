@@ -105,7 +105,7 @@ export default function GrievancePortal() {
           </h2>
           
           {grievances.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No grievances filed yet. Things are well! 🌟</p>
+            <p className="text-gray-500 text-center py-8">No grievances filed yet. Things are okay. ❤️</p>
           ) : (
             <div className="space-y-4">
               {grievances.map((grievance) => (
