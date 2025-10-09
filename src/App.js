@@ -104,7 +104,7 @@ export default function GrievancePortal() {
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., Left dirty dishes in sink"
+                placeholder="e.g., Let me open the door for myself."
               />
             </div>
 
