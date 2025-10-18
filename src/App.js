@@ -18,6 +18,15 @@ export default function GrievancePortal() {
     severity: 'minor'
   });
 
+  // Update body background when dark mode changes
+useEffect(() => {
+  if (darkMode) {
+    document.body.style.background = 'linear-gradient(135deg, #1f2937 0%, #581c87 50%, #312e81 100%)';
+  } else {
+    document.body.style.background = 'linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 50%, #e0e7ff 100%)';
+  }
+}, [darkMode]);
+
   // Load grievances from database
   const loadGrievances = async () => {
     setLoading(true);
@@ -98,11 +107,7 @@ export default function GrievancePortal() {
   };
 
   return (
-    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${
-      darkMode 
-        ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900' 
-        : ''
-    }`}>
+    <div className="min-h-screen p-4 md:p-8 transition-colors duration-300">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-start mb-8">
           <div className="flex-1"></div>
