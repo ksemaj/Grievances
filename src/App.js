@@ -19,13 +19,13 @@ export default function GrievancePortal() {
   });
 
   // Update body background when dark mode changes
-useEffect(() => {
-  if (darkMode) {
-    document.body.style.background = 'linear-gradient(135deg, #1f2937 0%, #581c87 50%, #312e81 100%)';
-  } else {
-    document.body.style.background = 'linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 50%, #e0e7ff 100%)';
-  }
-}, [darkMode]);
+  useEffect(() => {
+    if (darkMode) {
+      document.body.style.background = 'linear-gradient(135deg, #1f2937 0%, #581c87 50%, #312e81 100%)';
+    } else {
+      document.body.style.background = 'linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 50%, #e0e7ff 100%)';
+    }
+  }, [darkMode]);
 
   // Load grievances from database
   const loadGrievances = async () => {
@@ -141,8 +141,8 @@ useEffect(() => {
 
         <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mb-8 border hover:shadow-2xl transition-all duration-300 ${
           darkMode 
-            ? 'bg-gray-800/80 border-gray-700/50' 
-            : 'bg-white/80 border-white/20'
+            ? 'bg-gray-800 border-gray-700/50' 
+            : 'bg-white border-white/20'
         }`}>
           <h2 className="text-2xl font-semibold mb-4">
             <span className={`bg-clip-text text-transparent ${
@@ -224,8 +224,8 @@ useEffect(() => {
 
         <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 border hover:shadow-2xl transition-all duration-300 ${
           darkMode 
-            ? 'bg-gray-800/80 border-gray-700/50' 
-            : 'bg-white/80 border-white/20'
+            ? 'bg-gray-800 border-gray-700/50' 
+            : 'bg-white border-white/20'
         }`}>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">
