@@ -193,7 +193,13 @@ export default function GrievancePortal() {
                     ? 'border-pink-700 hover:border-pink-600 bg-gray-800 text-white' 
                     : 'border-pink-200 hover:border-pink-300 bg-gradient-to-r from-pink-50 to-purple-50 text-gray-900'
                 }`}
-                style={darkMode ? { colorScheme: 'dark' } : { colorScheme: 'light' }}
+                style={{
+                  colorScheme: darkMode ? 'dark' : 'light',
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='${darkMode ? '%23d1d5db' : '%23374151'}' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '1.25em 1.25em'
+                }}
               >
                 <option value="minor">Minor Annoyance</option>
                 <option value="major">Major Issue</option>
