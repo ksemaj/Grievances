@@ -21,6 +21,32 @@ html {
   background-attachment: fixed;
   background-size: cover;
   min-height: 100vh;
+  /* iOS Safari specific fixes */
+  -webkit-background-size: cover;
+  background-repeat: no-repeat;
+  /* Prevent overscroll bounce showing white */
+  overscroll-behavior: none;
+}
+
+/* Additional iOS Safari fixes */
+body {
+  /* Prevent overscroll bounce */
+  overscroll-behavior: none;
+  /* Ensure background covers overscroll areas */
+  position: relative;
+}
+
+/* Fix for iOS Safari overscroll areas */
+body::before {
+  content: '';
+  position: fixed;
+  top: -100vh;
+  left: 0;
+  right: 0;
+  bottom: -100vh;
+  background: linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 50%, #e0e7ff 100%);
+  z-index: -1;
+  pointer-events: none;
 }
 
 code {
