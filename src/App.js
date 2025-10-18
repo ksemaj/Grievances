@@ -101,7 +101,7 @@ export default function GrievancePortal() {
     <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${
       darkMode 
         ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900' 
-        : 'bg-gradient-to-br from-pink-100 via-purple-50 to-indigo-100'
+        : ''
     }`}>
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-start mb-8">

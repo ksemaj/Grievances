@@ -11,6 +11,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 50%, #e0e7ff 100%);
   min-height: 100vh;
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+/* Ensure the gradient extends beyond viewport for mobile scrolling */
+html {
+  background: linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 50%, #e0e7ff 100%);
+  background-attachment: fixed;
+  background-size: cover;
+  min-height: 100vh;
 }
 
 code {
