@@ -266,7 +266,7 @@ export default function GrievancePortal() {
                 <div
                   key={grievance.id}
                   className={`border-2 rounded-2xl p-5 ${getSeverityColor(grievance.severity)} hover:shadow-lg transition-all duration-300 hover:scale-105 transform backdrop-blur-sm ${
-                    darkMode ? 'bg-gray-800/70' : 'bg-white/70'
+                    darkMode ? 'bg-gray-800' : 'bg-white'
                   }`}
                 >
                   <div className="flex justify-between items-start mb-3">
