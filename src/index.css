@@ -84,3 +84,11 @@ select {
   appearance: none;
   padding-right: 2.5rem;
 }
+
+/* Disable overscroll bounce on mobile only */
+@media (max-width: 768px) {
+  html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+}
