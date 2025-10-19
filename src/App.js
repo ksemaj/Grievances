@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { AlertCircle, Send, Trash2, RefreshCw, Sun, Moon } from 'lucide-react';
 
-// Initialize Supabase client
+// supabase integ
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
   process.env.REACT_APP_SUPABASE_ANON_KEY
@@ -18,7 +18,7 @@ export default function GrievancePortal() {
     severity: 'minor'
   });
 
-  // Update body background when dark mode changes
+  // body changes when dark mode init
   useEffect(() => {
     if (darkMode) {
       document.body.style.background = 'linear-gradient(135deg, #1f2937 0%, #581c87 50%, #312e81 100%)';
@@ -27,7 +27,7 @@ export default function GrievancePortal() {
     }
   }, [darkMode]);
 
-  // Load grievances from database
+  // supabase grievance loading
   const loadGrievances = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -43,7 +43,7 @@ export default function GrievancePortal() {
     setLoading(false);
   };
 
-  // Load grievances when component mounts
+  // mounting, grievances loaded
   useEffect(() => {
     loadGrievances();
   }, []);
@@ -66,7 +66,7 @@ export default function GrievancePortal() {
         alert('Failed to submit grievance. Please try again.');
       } else {
         setFormData({ title: '', description: '', severity: 'minor' });
-        loadGrievances(); // Reload to show new grievance
+        loadGrievances(); // reload to show new grievance
       }
     }
   };
@@ -80,7 +80,7 @@ export default function GrievancePortal() {
     if (error) {
       console.error('Error deleting grievance:', error);
     } else {
-      loadGrievances(); // Reload after deletion
+      loadGrievances(); // reload after deletion
     }
   };
 

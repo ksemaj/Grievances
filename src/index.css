@@ -15,12 +15,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   position: relative;
-  /* Default light mode gradient - will be overridden by JS */
+  /* default light mode gradient, overridden by JS */
   background: linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 50%, #e0e7ff 100%);
   background-attachment: fixed;
 }
 
-/* Extended background that covers overscroll areas */
+/* extend the background */
 body::before {
   content: '';
   position: fixed;
@@ -28,7 +28,7 @@ body::before {
   left: 0;
   right: 0;
   height: 700vh;
-  /* Inherit the background from body */
+  /* body inheritance */
   background: inherit;
   z-index: -1;
   pointer-events: none;
@@ -39,7 +39,7 @@ code {
     monospace;
 }
 
-/* Custom Instagrammy animations */
+/* floaty stuff */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
@@ -58,7 +58,7 @@ code {
   animation: glow 2s ease-in-out infinite;
 }
 
-/* Custom scrollbar */
+/* custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -77,7 +77,7 @@ code {
   background: linear-gradient(to bottom, #db2777, #7c3aed);
 }
 
-/* Custom dropdown arrow positioning */
+/* custom dropdown arrow pos */
 select {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -85,7 +85,7 @@ select {
   padding-right: 2.5rem;
 }
 
-/* Disable overscroll bounce on mobile only */
+/* disable overscroll on mobile */
 @media (max-width: 768px) {
   html, body {
     overscroll-behavior: none;
