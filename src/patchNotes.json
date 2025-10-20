@@ -1,6 +1,32 @@
 {
   "versions": [
     {
+      "version": "1.4",
+      "date": "2025-10-20",
+      "items": [
+        "release_v1.2",
+        "chore: update patch notes & bump version",
+        "release: v1.1 patch notes and fixed-height notes box",
+        "chore: update patch notes & bump version",
+        "revert: remove JSON-driven patch notes; restore static v1.0 component",
+        "chore: update patch notes & bump version",
+        "ci: remove npm ci in beta workflow to avoid registry flakiness",
+        "ci: retrigger notes workflow without npm ci",
+        "chore: prepare v1.1 automation",
+        "feat: Add role selection, grievance completion, crossfade transitions, and Discord notifications",
+        "Update index.css",
+        "Fix iOS Safari overscroll white space issue",
+        "Extend background gradient for mobile scrolling",
+        "Add Open Graph meta tags for better embed caching",
+        "Update embed description to sweet girlfriend message",
+        "Update embed metadata in index.html",
+        "Fix dropdown chevron visibility in both light and dark modes",
+        "Fix dropdown chevron visibility",
+        "Fix double dropdown arrow issue",
+        "Fix dropdown arrow positioning"
+      ]
+    },
+    {
       "version": "1.3",
       "date": "2025-10-20",
       "items": [
