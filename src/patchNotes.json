@@ -1,0 +1,13 @@
+{
+  "versions": [
+    {
+      "version": "1.0",
+      "date": "2025-10-20",
+      "items": [
+        "Added Patch Notes section",
+        "Compact layout with green-themed Completed section",
+        "Role Selection shown on every visit"
+      ]
+    }
+  ]
+}
