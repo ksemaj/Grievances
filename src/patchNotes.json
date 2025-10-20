@@ -1,6 +1,28 @@
 {
   "versions": [
     {
+      "version": "1.1",
+      "date": "2025-10-20",
+      "items": [
+        "ci: remove npm ci in beta workflow to avoid registry flakiness",
+        "ci: retrigger notes workflow without npm ci",
+        "chore: prepare v1.1 automation",
+        "feat: Add role selection, grievance completion, crossfade transitions, and Discord notifications",
+        "Update index.css",
+        "Fix iOS Safari overscroll white space issue",
+        "Extend background gradient for mobile scrolling",
+        "Add Open Graph meta tags for better embed caching",
+        "Update embed description to sweet girlfriend message",
+        "Update embed metadata in index.html",
+        "Fix dropdown chevron visibility in both light and dark modes",
+        "Fix dropdown chevron visibility",
+        "Fix double dropdown arrow issue",
+        "Fix dropdown arrow positioning",
+        "Add dark mode toggle and UI improvements ðŸŒ™",
+        "Make grievance portal more cute and Instagrammy âœ¨"
+      ]
+    },
+    {
       "version": "1.0",
       "date": "2025-10-20",
       "items": [
