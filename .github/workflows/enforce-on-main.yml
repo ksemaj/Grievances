@@ -1,0 +1,19 @@
+name: Enforce Patch Notes on Main PR
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate patch notes
+        run: |
+          node -e '
+          try {
+            const d=require("./src/patchNotes.json");
+            if(!d.versions||!d.versions[0]){console.error("Missing versions");process.exit(1)};
+            const v=d.versions[0].version; if(!/^\d+\.\d+$/.test(v)){console.error("Bad version");process.exit(2)};
+            console.log("patch notes present:", v);
+          } catch (e) { console.error(e); process.exit(3); }
+          '

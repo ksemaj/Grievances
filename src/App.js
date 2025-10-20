@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { AlertCircle, Send, Trash2, RefreshCw, Sun, Moon } from 'lucide-react';
 
-// supabase integ
+// Initialize Supabase client
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
   process.env.REACT_APP_SUPABASE_ANON_KEY
@@ -11,24 +11,31 @@ const supabase = createClient(
 // --- In-app Notification Component ---
 // REMOVE the Notification component entirely
 
-const ROLE_KEY = 'grievanceRole';
+// Role is now session-only; no persistence
 
-const FADE_DURATION = 500; // ms
+// Crossfade helper removed for simplicity
 
-// Helper to safely stack screens
-function StackFade({ show, children, fadingOut, overlay }) {
-  // overlay === true => fixed overlay (Role Selection), false => normal flow (Portal)
+// Simple crossfade layer helper
+function StackFade({ show, fadingOut, overlay, children }) {
   if (!show) return null;
+  const base = `transition-[opacity,transform] duration-700 ease-out ${
+    fadingOut ? 'opacity-0 scale-95 translate-y-1 pointer-events-none' : 'opacity-100 scale-100 translate-y-0'
+  }`;
   if (overlay) {
-    return <div className={`fixed inset-0 w-full h-full z-50 overflow-hidden transition-opacity duration-500 ease-out ${fadingOut ? 'opacity-0' : 'opacity-100'}`} style={{ pointerEvents: fadingOut ? 'none' : 'auto', willChange: 'opacity' }}>
-      {children}
-    </div>;
+    return (
+      <div className={`fixed inset-0 z-50 ${base}`} style={{ willChange: 'opacity, transform' }}>
+        {children}
+      </div>
+    );
   }
-  // No stacking for portal: let scroll pass through
-  return <div className={`transition-opacity duration-500 ease-out ${fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} style={{ willChange: 'opacity' }}>{children}</div>;
+  return (
+    <div className={base} style={{ willChange: 'opacity, transform' }}>
+      {children}
+    </div>
+  );
 }
 
-function RoleSelection({ onSelect }) {
+function RoleSelection({ onSelect, notes, darkMode, onToggleDarkMode }) {
   // Lock body scroll while the role selection is visible and compensate for scrollbar width
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -46,27 +53,100 @@ function RoleSelection({ onSelect }) {
     };
   }, []);
 
+  // Mouse parallax for card and buttons
+  const cardRef = useRef(null);
+  // Independent parallax transforms per element (card stays still)
+  const [titleT, setTitleT] = useState('translate3d(0,0,0)');
+  const [jamesT, setJamesT] = useState('translate3d(0,0,0)');
+  const [bugT, setBugT] = useState('translate3d(0,0,0)');
+  const [notesT, setNotesT] = useState('translate3d(0,0,0)');
+  const [toggleT, setToggleT] = useState('translate3d(0,0,0)');
+  const [helperT, setHelperT] = useState('translate3d(0,0,0)');
+
+  const handleMove = (e) => {
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    // Subtle depth per element (translate only)
+    const lim = 6; // px cap
+    const baseX = Math.max(-lim, Math.min(lim, dx * 0.02));
+    const baseY = Math.max(-lim, Math.min(lim, dy * 0.02));
+    setTitleT(`translate3d(${baseX * 0.8}px, ${baseY * 0.8}px, 0)`);
+    setJamesT(`translate3d(${baseX * 1.0}px, ${baseY * 1.0}px, 0)`);
+    setBugT(`translate3d(${baseX * 0.9}px, ${baseY * 0.9}px, 0)`);
+    setNotesT(`translate3d(${baseX * 0.5}px, ${baseY * 0.5}px, 0)`);
+    setToggleT(`translate3d(${baseX * 1.1}px, ${baseY * 1.1}px, 0)`);
+    setHelperT(`translate3d(${baseX * 0.4}px, ${baseY * 0.4}px, 0)`);
+  };
+
+  const handleLeave = () => {
+    setTitleT('translate3d(0,0,0)');
+    setJamesT('translate3d(0,0,0)');
+    setBugT('translate3d(0,0,0)');
+    setNotesT('translate3d(0,0,0)');
+    setToggleT('translate3d(0,0,0)');
+    setHelperT('translate3d(0,0,0)');
+  };
+
   return (
-    <div className="relative h-full w-full flex flex-col items-center justify-center">
-      <div className="backdrop-blur-lg bg-white/70 rounded-3xl border-2 border-pink-200 shadow-2xl p-10 m-2 flex flex-col items-center animate-glow transition-all duration-700 ease-in-out">
-        <h2 className="text-3xl md:text-4xl font-extrabold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600">Who are you?</h2>
-        <div className="flex flex-col md:flex-row gap-7 mb-7 w-full justify-center">
-          <button
-            className="flex-1 px-10 py-6 text-2xl font-bold rounded-3xl bg-gradient-to-tr from-purple-500 via-pink-400 to-pink-600 hover:scale-105 active:scale-98 focus:outline-none shadow-xl text-white transition-all duration-300 ease-in-out border-4 border-transparent hover:border-indigo-300"
-            onClick={() => onSelect('boyfriend')}
-            style={{ letterSpacing: 2 }}
-          >
-            James
-          </button>
-          <button
-            className="flex-1 px-10 py-6 text-2xl font-bold rounded-3xl bg-gradient-to-tl from-pink-200 via-purple-100 to-indigo-100 hover:scale-105 active:scale-98 focus:outline-none shadow-lg text-pink-700 transition-all duration-300 ease-in-out border-4 border-transparent hover:border-pink-400"
-            onClick={() => onSelect('girlfriend')}
-            style={{ letterSpacing: 2 }}
-          >
-            Bug ❤️
-          </button>
+    <div className={`relative min-h-screen w-full flex flex-col items-center justify-center ${
+      darkMode ? 'bg-gradient-to-br from-black via-neutral-900 to-neutral-800' : 'bg-gradient-to-br from-white via-slate-50 to-gray-100'
+    }`}>
+      <div
+        ref={cardRef}
+        onMouseMove={handleMove}
+        onMouseLeave={handleLeave}
+        className={`backdrop-blur-lg rounded-3xl border-2 shadow-2xl p-10 m-2 flex flex-col items-center ${
+          darkMode ? 'bg-neutral-900/80 border-neutral-700/60' : 'bg-white/80 border-gray-200'
+        }`}
+      >
+        <div className="w-full">
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600" style={{ transform: titleT, transition: 'transform 180ms ease-out', willChange: 'transform' }}>Who are you?</h2>
+          <div className="flex flex-col md:flex-row gap-7 mb-7 w-full justify-center">
+            <button
+              className={`flex-1 px-10 py-6 text-2xl font-bold rounded-3xl transition-all duration-300 ease-in-out border-4 shadow-xl ${
+                darkMode
+                  ? 'text-neutral-200 bg-gradient-to-tr from-neutral-800 via-neutral-800 to-neutral-700 border-neutral-700 hover:border-neutral-500'
+                  : 'text-white bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-700 border-transparent hover:border-blue-300'
+              }`}
+              onClick={() => onSelect('boyfriend')}
+              style={{ letterSpacing: 2, transform: jamesT, transition: 'transform 180ms ease-out', willChange: 'transform' }}
+            >
+              James
+            </button>
+            <button
+              className={`flex-1 px-10 py-6 text-2xl font-bold rounded-3xl transition-all duration-300 ease-in-out border-4 shadow-lg hover:scale-105 active:scale-98 ${
+                darkMode
+                  ? 'text-neutral-200 bg-gradient-to-tl from-neutral-800 via-neutral-900 to-black border-neutral-700 hover:border-neutral-500'
+                  : 'border-transparent bg-gradient-to-tl from-pink-200 via-purple-100 to-indigo-100 text-pink-700 hover:border-pink-400'
+              }`}
+              onClick={() => onSelect('girlfriend')}
+              style={{ letterSpacing: 2, transform: bugT, transition: 'transform 180ms ease-out', willChange: 'transform' }}
+            >
+              Bug ❤️
+            </button>
+          </div>
         </div>
-        <div className="mt-2 italic text-gray-500 text-sm text-center w-full flex justify-center items-center">
+        {notes && (
+          <div className="mt-6 w-full max-w-2xl" style={{ transform: notesT, transition: 'transform 180ms ease-out', willChange: 'transform' }}>
+            {notes}
+          </div>
+        )}
+        <button
+          onClick={onToggleDarkMode}
+          className={`mt-4 p-2 rounded-full transition-[background-color,transform] duration-500 ease-out shadow hover:scale-105 active:scale-95 ${
+            darkMode ? 'bg-neutral-800 text-neutral-200 hover:bg-neutral-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+          }`}
+          style={{ transform: toggleT, transition: 'transform 180ms ease-out', willChange: 'transform' }}
+          aria-label="Toggle dark mode"
+        >
+          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+        <div className={`mt-2 italic text-sm text-center w-full flex justify-center items-center ${darkMode ? 'text-neutral-400' : 'text-gray-500'}`} style={{ transform: helperT, transition: 'transform 180ms ease-out', willChange: 'transform' }}>
           Your choice just affects which sections you see.<br/>
           You can switch any time!
         </div>
@@ -80,25 +160,44 @@ export default function GrievancePortal() {
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [formData, setFormData] = useState({ title: '', description: '', severity: 'minor' });
-  const [role, setRole] = useState(() => localStorage.getItem(ROLE_KEY) || null);
+  const [role, setRole] = useState(null);
   // Crossfade state
   const [transitioning, setTransitioning] = useState(false);
-  const [outgoing, setOutgoing] = useState(null); // 'role' or null
-  const [incoming, setIncoming] = useState(null); // desired role or null
+  const [outgoing, setOutgoing] = useState(null); // 'selection' | 'portal' | null
+  const [incoming, setIncoming] = useState(null); // 'selection' | 'portal' | null
+  const [pendingRole, setPendingRole] = useState(null); // role selected during transition
 
   // James's Discord user ID
   const DISCORD_USER_ID = "217849233133404161";
 
-  // body changes when dark mode init
-  useEffect(() => {
-    if (darkMode) {
-      document.body.style.background = 'linear-gradient(135deg, #1f2937 0%, #581c87 50%, #312e81 100%)';
-    } else {
-      document.body.style.background = 'linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 50%, #e0e7ff 100%)';
-    }
-  }, [darkMode]);
+  // Patch Notes component (static v1.0)
+  const PatchNotes = () => (
+    <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mb-8 border ${
+      darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20'
+    }`}>
+      <h2 className="text-2xl font-semibold mb-3">
+        <span className={`bg-clip-text text-transparent ${
+          darkMode ? 'bg-gradient-to-r from-pink-400 to-purple-400' : 'bg-gradient-to-r from-pink-600 to-purple-600'
+        }`}>Patch Notes • v1.1</span>
+      </h2>
+      <div
+        className={`${darkMode ? 'bg-gray-900/20' : 'bg-white/40'} rounded-2xl px-4 py-2 h-44 md:h-52 overflow-y-auto`}
+        style={{ scrollbarGutter: 'stable' }}
+      >
+        <ul className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} list-disc pl-6 text-sm space-y-1`}>
+          <li>Dark mode toggle on role selection screen (smooth transition)</li>
+          <li>Independent, subtle parallax on user selection elements</li>
+          <li>Smoother crossfade between selection and portal</li>
+          <li>James theme polish: navy UI and matching scrollbar</li>
+          <li>“Attention NOW” button with pulse; styled notify buttons</li>
+          <li>Title changed to “James’s Inbox”; removed helper tagline</li>
+          <li>“✓ Complete” button restored for active grievances</li>
+        </ul>
+      </div>
+    </div>
+  );
 
-  // supabase grievance loading
+  // Load grievances from database
   const loadGrievances = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -114,7 +213,7 @@ export default function GrievancePortal() {
     setLoading(false);
   };
 
-  // mounting, grievances loaded
+  // Load grievances when component mounts
   useEffect(() => {
     loadGrievances();
   }, []);
@@ -137,7 +236,7 @@ export default function GrievancePortal() {
         alert('Failed to submit grievance. Please try again.');
       } else {
         setFormData({ title: '', description: '', severity: 'minor' });
-        loadGrievances(); // reload to show new grievance
+        loadGrievances(); // Reload to show new grievance
       }
     }
   };
@@ -151,29 +250,13 @@ export default function GrievancePortal() {
     if (error) {
       console.error('Error deleting grievance:', error);
     } else {
-      loadGrievances(); // reload after deletion
+      loadGrievances(); // Reload after deletion
     }
   };
 
   // REMOVE the unused toggleDarkMode function
 
-  const getSeverityColor = (severity) => {
-    if (darkMode) {
-      switch(severity) {
-        case 'critical': return 'bg-gradient-to-br from-red-900/30 to-pink-900/30 text-red-200 border-red-800 shadow-red-800/20';
-        case 'major': return 'bg-gradient-to-br from-orange-900/30 to-pink-900/30 text-orange-200 border-orange-800 shadow-orange-800/20';
-        case 'minor': return 'bg-gradient-to-br from-yellow-900/30 to-pink-900/30 text-yellow-200 border-yellow-800 shadow-yellow-800/20';
-        default: return 'bg-gradient-to-br from-gray-800/30 to-pink-900/20 text-gray-200 border-gray-700 shadow-gray-800/20';
-      }
-    } else {
-      switch(severity) {
-        case 'critical': return 'bg-gradient-to-br from-red-100 to-pink-100 text-red-800 border-red-200 shadow-red-200';
-        case 'major': return 'bg-gradient-to-br from-orange-100 to-pink-100 text-orange-800 border-orange-200 shadow-orange-200';
-        case 'minor': return 'bg-gradient-to-br from-yellow-100 to-pink-100 text-yellow-800 border-yellow-200 shadow-yellow-200';
-        default: return 'bg-gradient-to-br from-gray-100 to-pink-50 text-gray-800 border-gray-200 shadow-gray-200';
-      }
-    }
-  };
+  // Removed unused getSeverityColor helper
 
   // --- NEW: Mark grievance complete ---
   const markCompleted = async (id, completed) => {
@@ -194,30 +277,34 @@ export default function GrievancePortal() {
   const activeGrievances = grievances.filter(g => !g.completed && g.status !== 'Completed');
   const completedGrievances = grievances.filter(g => g.completed || g.status === 'Completed');
 
-  //--- Role selection/persistence with crossfade ---
+  // Role selection (non-persistent)
+  const FADE_MS = 700;
   const handleRoleSelect = newRole => {
-    setIncoming(newRole);
-    setOutgoing(role); // role is null initially
+    if (transitioning) return;
+    setPendingRole(newRole);
+    setOutgoing('selection');
+    setIncoming('portal');
     setTransitioning(true);
     setTimeout(() => {
       setRole(newRole);
-      localStorage.setItem(ROLE_KEY, newRole);
       setTransitioning(false);
       setOutgoing(null);
       setIncoming(null);
-    }, FADE_DURATION);
+      setPendingRole(null);
+    }, FADE_MS);
   };
   const handleRoleSwitch = () => {
-    setOutgoing(role);
-    setIncoming(null);
+    if (transitioning) return;
+    setPendingRole(null);
+    setOutgoing('portal');
+    setIncoming('selection');
     setTransitioning(true);
     setTimeout(() => {
       setRole(null);
-      localStorage.removeItem(ROLE_KEY);
       setTransitioning(false);
       setOutgoing(null);
       setIncoming(null);
-    }, FADE_DURATION);
+    }, FADE_MS);
   };
 
   // Discord notification handlers
@@ -257,21 +344,51 @@ export default function GrievancePortal() {
     }
   };
 
+  // Notes feature removed in v1.0
+
   //--- PHASE: Which screens to render for crossfade ---
+  const activeRole = (transitioning && incoming === 'portal') ? (pendingRole ?? role) : role;
+  // Apply a body class for James theme (used for scrollbar styling)
+  useEffect(() => {
+    if (activeRole === 'boyfriend') {
+      document.body.classList.add('james-theme');
+    } else {
+      document.body.classList.remove('james-theme');
+    }
+    return () => {
+      document.body.classList.remove('james-theme');
+    };
+  }, [activeRole]);
   const renderPortal = (
-    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900' : ''}`}>  
+    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${
+      activeRole === 'boyfriend'
+        ? (darkMode ? 'bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950' : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100')
+        : (darkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900' : '')
+    }`}>  
       <div className="max-w-4xl mx-auto transition-opacity duration-500 ease-out opacity-100">
         <div className="flex justify-between items-start mb-8">
           <button
             onClick={handleRoleSwitch}
-            className={`transition-all px-4 py-2 rounded-2xl text-sm mt-2 border font-bold shadow hover:scale-105 active:scale-100 z-30 focus:outline-none ${darkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700 hover:bg-pink-800/60' : 'bg-pink-100 text-pink-800 border-pink-300 hover:bg-pink-200'}`}
+            className={`transition-all px-4 py-2 rounded-2xl text-sm mt-2 border font-bold shadow hover:scale-105 active:scale-100 z-30 focus:outline-none ${
+              activeRole === 'boyfriend'
+                ? (darkMode
+                    ? 'bg-blue-900/30 text-blue-200 border-blue-700 hover:bg-blue-800/60'
+                    : 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200')
+                : (darkMode
+                    ? 'bg-pink-900/30 text-pink-200 border-pink-700 hover:bg-pink-800/60'
+                    : 'bg-pink-100 text-pink-800 border-pink-300 hover:bg-pink-200')
+            }`}
             style={{letterSpacing:2}}
             title="Switch role? You can show or hide completed grievances.">
               Switch Role
           </button>
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className={`p-2 rounded-full transition-all duration-300 ${darkMode ? 'bg-pink-300 hover:bg-pink-200 text-pink-800' : 'bg-gray-800 hover:bg-gray-700 text-white'} shadow-lg hover:scale-110`}
+            className={`p-2 rounded-full transition-all duration-300 ${
+              activeRole === 'boyfriend'
+                ? (darkMode ? 'bg-blue-300 hover:bg-blue-200 text-blue-800' : 'bg-gray-800 hover:bg-gray-700 text-white')
+                : (darkMode ? 'bg-pink-300 hover:bg-pink-200 text-pink-800' : 'bg-gray-800 hover:bg-gray-700 text-white')
+            } shadow-lg hover:scale-110`}
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -279,135 +396,151 @@ export default function GrievancePortal() {
         
         <div className="text-center mb-8">
           <AlertCircle className={`w-16 h-16 mx-auto mb-4 hover:scale-110 transition-transform duration-300 animate-float ${
-            darkMode ? 'text-purple-400' : 'text-purple-600'
+            activeRole === 'boyfriend'
+              ? (darkMode ? 'text-blue-300' : 'text-blue-600')
+              : (darkMode ? 'text-purple-400' : 'text-purple-600')
           }`} style={{
             filter: `drop-shadow(0 0 8px ${darkMode ? 'rgba(147, 51, 234, 0.4)' : 'rgba(147, 51, 234, 0.3)'})`
           }} />
           <h1 className="text-4xl md:text-5xl font-bold mb-2 drop-shadow-sm">
             <span className={`bg-clip-text text-transparent ${
-              darkMode 
-                ? 'bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400' 
-                : 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600'
-            }`}>Ally's Grievance Portal</span>
+              activeRole === 'boyfriend'
+                ? (darkMode ? 'bg-gradient-to-r from-blue-300 via-cyan-300 to-indigo-300'
+                             : 'bg-gradient-to-r from-blue-600 via-cyan-600 to-indigo-600')
+                : (darkMode ? 'bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400'
+                             : 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600')
+            }`}>{activeRole === 'boyfriend' ? "James's Inbox" : "Ally's Grievance Portal"}</span>
           </h1>
-          <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Please tell me how you feel. 💕</p>
+          {activeRole !== 'boyfriend' && (
+            <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Please tell me how you feel. 💕</p>
+          )}
         </div>
 
-        <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mb-8 border hover:shadow-2xl transition-all duration-300 ${
-          darkMode 
-            ? 'bg-gray-800 border-gray-700/50' 
-            : 'bg-white border-white/20'
-        }`}>
-          <h2 className="text-2xl font-semibold mb-4">
-            <span className={`bg-clip-text text-transparent ${
-              darkMode 
-                ? 'bg-gradient-to-r from-pink-400 to-purple-400' 
-                : 'bg-gradient-to-r from-pink-600 to-purple-600'
-            }`}>Submit New Grievance</span>
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                The Incident... 🚨
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all duration-300 outline-none ${
-                  darkMode 
-                    ? 'border-pink-700 hover:border-pink-600 bg-gradient-to-r from-gray-800 to-purple-900 text-white placeholder-gray-400' 
-                    : 'border-pink-200 hover:border-pink-300 bg-gradient-to-r from-pink-50 to-purple-50 text-gray-900 placeholder-gray-500'
-                }`}
-                placeholder="e.g., Let me open the door for myself."
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Your point of view 💭
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                rows="4"
-                className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all duration-300 resize-none outline-none ${
-                  darkMode 
-                    ? 'border-pink-700 hover:border-pink-600 bg-gradient-to-r from-gray-800 to-purple-900 text-white placeholder-gray-400' 
-                    : 'border-pink-200 hover:border-pink-300 bg-gradient-to-r from-pink-50 to-purple-50 text-gray-900 placeholder-gray-500'
-                }`}
-                placeholder="Describe the grievance in detail..."
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Severity Level
-              </label>
-              <select
-                value={formData.severity}
-                onChange={(e) => setFormData({...formData, severity: e.target.value})}
-                className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all duration-300 outline-none ${
-                  darkMode 
-                    ? 'border-pink-700 hover:border-pink-600 bg-gray-800 text-white' 
-                    : 'border-pink-200 hover:border-pink-300 bg-gradient-to-r from-pink-50 to-purple-50 text-gray-900'
-                }`}
-                style={{
-                  colorScheme: darkMode ? 'dark' : 'light',
-                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='${darkMode ? '%23d1d5db' : '%23374151'}' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                  backgroundPosition: 'right 0.75rem center',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundSize: '1.25em 1.25em'
-                }}
-              >
-                <option value="minor">Minor Annoyance</option>
-                <option value="major">Major Issue</option>
-                <option value="critical">CRITICAL OFFENSE 😡</option>
-              </select>
-            </div>
-
-            <button
-              onClick={handleSubmit}
-              className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-4 rounded-2xl font-semibold hover:from-pink-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 transform"
-            >
-              <Send size={20} />
-              Submit Grievance
-            </button>
-          </div>
-          
-          {/* Discord notification buttons */}
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              onClick={notifyBoyfriend}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-2xl font-semibold hover:from-purple-600 hover:to-pink-700 transition-all duration-300 shadow-md hover:shadow-lg"
-            >
-              Notify Boyfriend
-            </button>
-            <button
-              onClick={attentionPing}
-              className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 rounded-2xl font-semibold hover:from-red-600 hover:to-rose-700 transition-all duration-300 shadow-md hover:shadow-lg"
-            >
-              Attention Button
-            </button>
-          </div>
-        </div>
-
-        {/* --- FILED (ACTIVE) GRIEVANCES --- */}
-        <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 border hover:shadow-2xl transition-all duration-400 ease-in-out ${darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20'}`}>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold">
+        {activeRole !== 'boyfriend' && (
+          <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mb-8 border hover:shadow-2xl transition-all duration-300 ${
+            darkMode 
+              ? 'bg-gray-800/80 border-gray-700/50' 
+              : 'bg-white/80 border-white/20'
+          }`}>
+            <h2 className="text-2xl font-semibold mb-4">
               <span className={`bg-clip-text text-transparent ${
                 darkMode 
                   ? 'bg-gradient-to-r from-pink-400 to-purple-400' 
                   : 'bg-gradient-to-r from-pink-600 to-purple-600'
+              }`}>Submit New Grievance</span>
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  The Incident... 🚨
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all duration-300 outline-none ${
+                    darkMode 
+                      ? 'border-pink-700 hover:border-pink-600 bg-gradient-to-r from-gray-800 to-purple-900 text-white placeholder-gray-400' 
+                      : 'border-pink-200 hover:border-pink-300 bg-gradient-to-r from-pink-50 to-purple-50 text-gray-900 placeholder-gray-500'
+                  }`}
+                  placeholder="e.g., Let me open the door for myself."
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Your point of view 💭
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  rows="4"
+                  className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all duration-300 resize-none outline-none ${
+                    darkMode 
+                      ? 'border-pink-700 hover:border-pink-600 bg-gradient-to-r from-gray-800 to-purple-900 text-white placeholder-gray-400' 
+                      : 'border-pink-200 hover:border-pink-300 bg-gradient-to-r from-pink-50 to-purple-50 text-gray-900 placeholder-gray-500'
+                  }`}
+                  placeholder="Describe the grievance in detail..."
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Severity Level
+                </label>
+                <select
+                  value={formData.severity}
+                  onChange={(e) => setFormData({...formData, severity: e.target.value})}
+                  className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all duration-300 outline-none ${
+                    darkMode 
+                      ? 'border-pink-700 hover:border-pink-600 bg-gray-800 text-white' 
+                      : 'border-pink-200 hover:border-pink-300 bg-gradient-to-r from-pink-50 to-purple-50 text-gray-900'
+                  }`}
+                  style={{
+                    colorScheme: darkMode ? 'dark' : 'light',
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='${darkMode ? '%23d1d5db' : '%23374151'}' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 0.75rem center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '1.25em 1.25em'
+                  }}
+                >
+                  <option value="minor">Minor Annoyance</option>
+                  <option value="major">Major Issue</option>
+                  <option value="critical">CRITICAL OFFENSE 😡</option>
+                </select>
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-4 rounded-2xl font-semibold hover:from-pink-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 transform"
+              >
+                <Send size={20} />
+                Submit Grievance
+              </button>
+            </div>
+
+            {/* Discord notification buttons */}
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={notifyBoyfriend}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-2xl font-semibold hover:from-purple-600 hover:to-pink-700 transition-all duration-300 shadow-md hover:shadow-lg"
+              >
+                Notify Boyfriend
+              </button>
+              <button
+                onClick={attentionPing}
+                className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 rounded-2xl font-semibold hover:from-red-600 hover:to-rose-700 transition-all duration-300 shadow-md hover:shadow-lg hover:animate-pulse focus:animate-pulse"
+              >
+                Attention NOW
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* --- FILED (ACTIVE) GRIEVANCES --- */}
+        <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mt-8 mb-8 border hover:shadow-2xl transition-all duration-300 ${
+          activeRole === 'boyfriend'
+            ? (darkMode ? 'bg-slate-900/80 border-blue-900/40' : 'bg-blue-50/80 border-blue-200/50')
+            : (darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20')
+        }`}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">
+              <span className={`bg-clip-text text-transparent ${
+                activeRole === 'boyfriend'
+                  ? (darkMode ? 'bg-gradient-to-r from-blue-300 to-cyan-300' : 'bg-gradient-to-r from-blue-600 to-cyan-600')
+                  : (darkMode ? 'bg-gradient-to-r from-pink-400 to-purple-400' : 'bg-gradient-to-r from-pink-600 to-purple-600')
               }`}>Filed Grievances ({activeGrievances.length})</span>
             </h2>
             <button
               onClick={loadGrievances}
               className={`flex items-center gap-2 hover:scale-110 transition-all duration-300 px-3 py-2 rounded-xl ${
-                darkMode 
-                  ? 'text-purple-400 hover:text-purple-300 bg-gray-700 hover:bg-gray-600' 
-                  : 'text-purple-600 hover:text-purple-700 bg-pink-50 hover:bg-pink-100'
+                activeRole === 'boyfriend'
+                  ? (darkMode
+                      ? 'text-blue-300 hover:text-blue-200 bg-slate-700 hover:bg-slate-600'
+                      : 'text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100')
+                  : (darkMode
+                      ? 'text-purple-400 hover:text-purple-300 bg-gray-700 hover:bg-gray-600'
+                      : 'text-purple-600 hover:text-purple-700 bg-pink-50 hover:bg-pink-100')
               }`}
             >
               <RefreshCw size={20} />
@@ -422,94 +555,151 @@ export default function GrievancePortal() {
               }`}></div>
               <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading grievances... ✨</p>
             </div>
-          ) : activeGrievances.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">🌸</div>
-              <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No active grievances. Things are ok.</p>
-            </div>
           ) : (
-            <div className="space-y-4">
-              {activeGrievances.map((grievance) => (
-                <div
-                  key={grievance.id}
-                  className={`border-2 rounded-2xl p-5 ${getSeverityColor(grievance.severity)} hover:shadow-lg transition-all duration-300 hover:scale-105 transform backdrop-blur-sm ${
-                    darkMode ? 'bg-gray-800' : 'bg-white'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className={`font-bold text-lg ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{grievance.title}</h3>
-                    <div className="flex gap-2">
-                      <button onClick={() => markCompleted(grievance.id, true)} className={`${darkMode ? 'bg-green-900/40 text-green-300 hover:bg-green-700/60' : 'bg-green-100 text-green-800 hover:bg-green-300'} px-3 py-1 rounded-lg mr-2 transition-all duration-200 font-semibold`}>✓ Complete</button>
-                      <button onClick={() => deleteGrievance(grievance.id)} className={`transition-all duration-300 hover:scale-110 p-1 rounded-lg ${darkMode ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/30' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'}`}><Trash2 size={18} /></button>
+            <div className="space-y-6">
+              {activeGrievances.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No active grievances found. 🎉</p>
+                </div>
+              ) : (
+                activeGrievances.map(grievance => (
+                  <div key={grievance.id} className={`backdrop-blur-sm rounded-2xl shadow p-5 border transition-all duration-200 ${
+                    activeRole === 'boyfriend'
+                      ? (darkMode ? 'bg-slate-800/80 border-blue-800/40' : 'bg-blue-50/80 border-blue-200/50')
+                      : (darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20')
+                  }`}>
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {grievance.title}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => markCompleted(grievance.id, true)}
+                          className={`${darkMode ? 'bg-green-900/40 text-green-300 hover:bg-green-700/60' : 'bg-green-100 text-green-800 hover:bg-green-300'} px-3 py-1 rounded-lg transition-all duration-200 font-semibold`}
+                          title="Mark as Completed"
+                        >
+                          ✓ Complete
+                        </button>
+                        <button
+                          onClick={() => deleteGrievance(grievance.id)}
+                          className={`p-2 rounded-full transition-colors duration-200 ${
+                            darkMode ? 'text-red-400 hover:text-red-300 hover:bg-red-900/30' : 'text-red-600 hover:text-red-500 hover:bg-red-50'
+                          }`}
+                          title="Delete Grievance"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+                    </div>
+                    <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{grievance.description}</p>
+                    <div className="flex justify-between items-center mt-4 text-xs">
+                      <span className={`font-semibold uppercase px-3 py-1 rounded-full ${darkMode ? 'bg-gradient-to-r from-pink-900/50 to-purple-900/50 text-purple-300' : 'bg-gradient-to-r from-pink-100 to-purple-100 text-purple-700'}`}>
+                        {grievance.severity} • {grievance.status}
+                      </span>
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>{new Date(grievance.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <p className={`text-sm mb-4 leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{grievance.description}</p>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className={`font-semibold uppercase px-3 py-1 rounded-full ${darkMode ? 'bg-gradient-to-r from-pink-900/50 to-purple-900/50 text-purple-300' : 'bg-gradient-to-r from-pink-100 to-purple-100 text-purple-700'}`}>{grievance.severity} • {grievance.status}</span>
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>{new Date(grievance.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
 
         {/* --- COMPLETED GRIEVANCES --- */}
-        {role === 'boyfriend' && (
-          <div className={`mt-8 backdrop-blur-sm rounded-3xl shadow-lg p-6 border hover:shadow-2xl transition-all duration-500 ease-in-out ${darkMode ? 'bg-gray-900/80 border-green-900/40' : 'bg-green-50/70 border-green-300/30'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold">
-                <span className={`bg-clip-text text-transparent ${darkMode ? 'bg-gradient-to-r from-lime-400 to-green-300' : 'bg-gradient-to-r from-green-500 to-lime-500'}`}>Completed Grievances ({completedGrievances.length})</span>
-              </h2>
+        <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mt-8 mb-8 border hover:shadow-2xl transition-all duration-300 ${
+          darkMode ? 'bg-gray-900/80 border-green-900/40' : 'bg-green-50/70 border-green-300/30'
+        }`}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">
+              <span className={`bg-clip-text text-transparent ${
+                activeRole === 'boyfriend'
+                  ? (darkMode ? 'bg-gradient-to-r from-blue-300 to-cyan-300' : 'bg-gradient-to-r from-blue-600 to-cyan-600')
+                  : (darkMode ? 'bg-gradient-to-r from-pink-400 to-purple-400' : 'bg-gradient-to-r from-pink-600 to-purple-600')
+              }`}>Completed Grievances ({completedGrievances.length})</span>
+            </h2>
+            <button
+              onClick={loadGrievances}
+              className={`flex items-center gap-2 hover:scale-110 transition-all duration-300 px-3 py-2 rounded-xl ${
+                activeRole === 'boyfriend'
+                  ? (darkMode
+                      ? 'text-blue-300 hover:text-blue-200 bg-slate-700 hover:bg-slate-600'
+                      : 'text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100')
+                  : (darkMode
+                      ? 'text-purple-400 hover:text-purple-300 bg-gray-700 hover:bg-gray-600'
+                      : 'text-purple-600 hover:text-purple-700 bg-pink-50 hover:bg-pink-100')
+              }`}
+            >
+              <RefreshCw size={20} />
+              Refresh
+            </button>
+          </div>
+          
+          {loading ? (
+            <div className="text-center py-8">
+              <div className={`inline-block animate-spin rounded-full h-8 w-8 border-b-2 mb-4 ${
+                darkMode ? 'border-pink-400' : 'border-pink-500'
+              }`}></div>
+              <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading grievances... ✨</p>
             </div>
-            {completedGrievances.length === 0 ? (
-              <div className="text-center py-8 opacity-70">
-                <div className="text-5xl mb-4">🍃</div>
-                <p className="text-lg">No completed grievances yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {completedGrievances.map(grievance => (
-                  <div key={grievance.id} className={`border-2 rounded-2xl p-5 ${getSeverityColor(grievance.severity)} hover:shadow-md transition-all duration-300 hover:scale-102 transform backdrop-blur-sm opacity-70 ${darkMode ? 'bg-gray-700/70' : 'bg-green-100/60 border-green-200'}`}>
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className={`font-bold text-lg ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{grievance.title}</h3>
-                      <button onClick={() => markCompleted(grievance.id, false)} className={`${darkMode ? 'bg-yellow-900/40 text-yellow-300 hover:bg-yellow-700/60' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-300'} px-3 py-1 rounded-lg transition-all duration-200 font-semibold`}>↩ Back to Open</button>
+          ) : (
+            <div className="space-y-6">
+              {completedGrievances.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No completed grievances found. 🎉</p>
+                </div>
+              ) : (
+                completedGrievances.map(grievance => (
+                  <div key={grievance.id} className={`backdrop-blur-sm rounded-2xl shadow p-5 border transition-all duration-200 ${
+                    darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20'
+                  }`}>
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {grievance.title}
+                      </h3>
+                      <button
+                        onClick={() => markCompleted(grievance.id, false)}
+                        className={`${darkMode ? 'bg-yellow-900/40 text-yellow-300 hover:bg-yellow-700/60' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-300'} px-3 py-1 rounded-lg transition-all duration-200 font-semibold`}
+                      >
+                        ↩ Back to Open
+                      </button>
                     </div>
-                    <p className={`text-sm mb-4 leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{grievance.description}</p>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className={`font-semibold uppercase px-3 py-1 rounded-full ${darkMode ? 'bg-gradient-to-r from-green-900/30 to-pink-900/10 text-green-200' : 'bg-gradient-to-r from-green-200 to-pink-100 text-green-700'}`}>{grievance.severity} • Completed</span>
+                    <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{grievance.description}</p>
+                    <div className="flex justify-between items-center mt-4 text-xs">
+                      <span className={`font-semibold uppercase px-3 py-1 rounded-full ${
+                        darkMode ? 'bg-gradient-to-r from-green-900/30 to-pink-900/10 text-green-200' : 'bg-gradient-to-r from-green-200 to-pink-100 text-green-700'
+                      }`}>
+                        {grievance.severity} • Completed
+                      </span>
                       <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>{new Date(grievance.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
-  // --- Dynamic crossfade stack ---
+
+  // Crossfade render: blend selection and portal
+  const showSelection = (!role) || (transitioning && (incoming === 'selection' || outgoing === 'selection'));
+  const selectionFadingOut = transitioning && outgoing === 'selection';
+  const showPortal = (role) || (transitioning && (incoming === 'portal' || outgoing === 'portal'));
+  const portalFadingOut = transitioning && outgoing === 'portal';
+
   return (
     <>
-      {(() => {
-        const roleSelectionShow = (!role) || (transitioning && (outgoing === null || incoming === null));
-        const roleSelectionFadingOut = transitioning && outgoing === null; // leaving selection -> portal
-
-        const portalShow = (!!role) || (transitioning && (incoming !== null || outgoing !== null));
-        const portalFadingOut = transitioning && incoming === null; // leaving portal -> selection
-
-        return (
-          <>
-            <StackFade show={roleSelectionShow} fadingOut={roleSelectionFadingOut} overlay={true}>
-              <RoleSelection onSelect={handleRoleSelect} />
-            </StackFade>
-            <StackFade show={portalShow} fadingOut={portalFadingOut} overlay={false}>
-              {renderPortal}
-            </StackFade>
-          </>
-        );
-      })()}
+      <StackFade show={showSelection} fadingOut={selectionFadingOut} overlay>
+        <div className={`${selectionFadingOut ? 'fade-out-soft' : 'fade-in-soft'}`}>
+          <RoleSelection onSelect={handleRoleSelect} notes={<PatchNotes />} darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} />
+        </div>
+      </StackFade>
+      <StackFade show={showPortal} fadingOut={portalFadingOut} overlay={false}>
+        <div className={`${portalFadingOut ? 'fade-out-soft' : 'fade-in-soft'}`}>
+          {renderPortal}
+        </div>
+      </StackFade>
     </>
   );
 }
