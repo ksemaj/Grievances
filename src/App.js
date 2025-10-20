@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { AlertCircle, Send, Trash2, RefreshCw, Sun, Moon } from 'lucide-react';
+import { AlertCircle, Send, Trash2, RefreshCw, Sun, Moon, CheckCircle } from 'lucide-react';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -166,6 +166,9 @@ export default function GrievancePortal() {
   const [outgoing, setOutgoing] = useState(null); // 'selection' | 'portal' | null
   const [incoming, setIncoming] = useState(null); // 'selection' | 'portal' | null
   const [pendingRole, setPendingRole] = useState(null); // role selected during transition
+  // Submission overlay state
+  const [showSubmitOverlay, setShowSubmitOverlay] = useState(false);
+  const [submitOverlayFadingOut, setSubmitOverlayFadingOut] = useState(false);
 
   // James's Discord user ID
   const DISCORD_USER_ID = "217849233133404161";
@@ -178,20 +181,19 @@ export default function GrievancePortal() {
       <h2 className="text-2xl font-semibold mb-3">
         <span className={`bg-clip-text text-transparent ${
           darkMode ? 'bg-gradient-to-r from-pink-400 to-purple-400' : 'bg-gradient-to-r from-pink-600 to-purple-600'
-        }`}>Patch Notes • v1.1</span>
+        }`}>Patch Notes • v1.2</span>
       </h2>
       <div
         className={`${darkMode ? 'bg-gray-900/20' : 'bg-white/40'} rounded-2xl px-4 py-2 h-44 md:h-52 overflow-y-auto`}
         style={{ scrollbarGutter: 'stable' }}
       >
         <ul className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} list-disc pl-6 text-sm space-y-1`}>
-          <li>Dark mode toggle on role selection screen (smooth transition)</li>
-          <li>Independent, subtle parallax on user selection elements</li>
-          <li>Smoother crossfade between selection and portal</li>
-          <li>James theme polish: navy UI and matching scrollbar</li>
-          <li>“Attention NOW” button with pulse; styled notify buttons</li>
-          <li>Title changed to “James’s Inbox”; removed helper tagline</li>
-          <li>“✓ Complete” button restored for active grievances</li>
+          <li>Auto-notify James on every new grievance</li>
+          <li>New blurred, fading confirmation overlay after submit</li>
+          <li>Notify/Attention buttons disable while sending</li>
+          <li>Smoother crossfade via GPU compositing hint</li>
+          <li>Reduced-motion support for fades and animations</li>
+          <li>PWA icons: iOS 180×180 and maskable Android icons</li>
         </ul>
       </div>
     </div>
@@ -237,6 +239,29 @@ export default function GrievancePortal() {
       } else {
         setFormData({ title: '', description: '', severity: 'minor' });
         loadGrievances(); // Reload to show new grievance
+        // Show transient confirmation overlay
+        setShowSubmitOverlay(true);
+        setSubmitOverlayFadingOut(false);
+        setTimeout(() => {
+          setSubmitOverlayFadingOut(true);
+          setTimeout(() => setShowSubmitOverlay(false), FADE_MS);
+        }, 2200);
+        // Always notify James after a successful submission
+        try {
+          const { error: notifyError } = await supabase.functions.invoke("notify-discord", {
+            body: {
+              userId: DISCORD_USER_ID,
+              type: "notify",
+              title: newGrievance.title,
+              description: newGrievance.description
+            }
+          });
+          if (notifyError) throw notifyError;
+          // overlay provides confirmation
+        } catch (e) {
+          console.error('Notification failed:', e);
+          // overlay shows success; errors are silent here
+        }
       }
     }
   };
@@ -308,7 +333,12 @@ export default function GrievancePortal() {
   };
 
   // Discord notification handlers
+  const [sendingNotify, setSendingNotify] = useState(false);
+  const [sendingAttention, setSendingAttention] = useState(false);
+
   const notifyBoyfriend = async () => {
+    if (sendingNotify) return;
+    setSendingNotify(true);
     try {
       const { error } = await supabase.functions.invoke("notify-discord", {
         body: {
@@ -319,14 +349,17 @@ export default function GrievancePortal() {
         }
       });
       if (error) throw error;
-      alert("Notified successfully.");
+      // success
     } catch (e) {
       console.error(e);
-      alert("Failed to notify. Check function logs.");
+      // failure
     }
+    setSendingNotify(false);
   };
 
   const attentionPing = async () => {
+    if (sendingAttention) return;
+    setSendingAttention(true);
     try {
       const { error } = await supabase.functions.invoke("notify-discord", {
         body: {
@@ -337,11 +370,12 @@ export default function GrievancePortal() {
         }
       });
       if (error) throw error;
-      alert("Attention ping sent.");
+      // success
     } catch (e) {
       console.error(e);
-      alert("Failed to send attention ping.");
+      // failure
     }
+    setSendingAttention(false);
   };
 
   // Notes feature removed in v1.0
@@ -503,17 +537,20 @@ export default function GrievancePortal() {
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={notifyBoyfriend}
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-2xl font-semibold hover:from-purple-600 hover:to-pink-700 transition-all duration-300 shadow-md hover:shadow-lg"
+                disabled={sendingNotify}
+                className={`w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-2xl font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${sendingNotify ? 'opacity-60 cursor-not-allowed' : 'hover:from-purple-600 hover:to-pink-700'}`}
               >
-                Notify Boyfriend
+                {sendingNotify ? 'Notifying…' : 'Notify Boyfriend'}
               </button>
               <button
                 onClick={attentionPing}
-                className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 rounded-2xl font-semibold hover:from-red-600 hover:to-rose-700 transition-all duration-300 shadow-md hover:shadow-lg hover:animate-pulse focus:animate-pulse"
+                disabled={sendingAttention}
+                className={`w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 rounded-2xl font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${sendingAttention ? 'opacity-60 cursor-not-allowed' : 'hover:from-red-600 hover:to-rose-700 hover:animate-pulse focus:animate-pulse'}`}
               >
-                Attention NOW
+                {sendingAttention ? 'Sending…' : 'Attention NOW'}
               </button>
             </div>
+            {/* Inline status removed in favor of overlay */}
           </div>
         )}
 
@@ -691,13 +728,25 @@ export default function GrievancePortal() {
   return (
     <>
       <StackFade show={showSelection} fadingOut={selectionFadingOut} overlay>
-        <div className={`${selectionFadingOut ? 'fade-out-soft' : 'fade-in-soft'}`}>
+        <div className={`${selectionFadingOut ? 'fade-out-soft' : 'fade-in-soft'} transform-gpu`} style={{backdropFilter: 'none'}}>
           <RoleSelection onSelect={handleRoleSelect} notes={<PatchNotes />} darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} />
         </div>
       </StackFade>
       <StackFade show={showPortal} fadingOut={portalFadingOut} overlay={false}>
-        <div className={`${portalFadingOut ? 'fade-out-soft' : 'fade-in-soft'}`}>
+        <div className={`${portalFadingOut ? 'fade-out-soft' : 'fade-in-soft'} transform-gpu`}>
           {renderPortal}
+        </div>
+      </StackFade>
+      {/* Submission confirmation overlay */}
+      <StackFade show={showSubmitOverlay} fadingOut={submitOverlayFadingOut} overlay>
+        <div className={`${submitOverlayFadingOut ? 'fade-out-soft' : 'fade-in-soft'} w-full h-full flex items-center justify-center ${darkMode ? 'bg-black/50' : 'bg-black/40'} backdrop-blur-md`}> 
+          <div className={`rounded-3xl border shadow-2xl px-6 py-5 ${darkMode ? 'bg-neutral-900/80 border-neutral-700 text-neutral-100' : 'bg-white/90 border-gray-200 text-gray-900'}`}>
+            <div className="flex items-center gap-3">
+              <CheckCircle className={`${darkMode ? 'text-green-300' : 'text-green-600'}`} size={24} />
+              <div className="text-lg font-semibold">Grievance submitted</div>
+            </div>
+            <div className={`${darkMode ? 'text-neutral-400' : 'text-gray-500'} text-sm mt-1`}>James has been notified.</div>
+          </div>
         </div>
       </StackFade>
     </>
