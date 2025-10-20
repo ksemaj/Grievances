@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import patchNotes from './patchNotes.json';
 import { createClient } from '@supabase/supabase-js';
 import { AlertCircle, Send, Trash2, RefreshCw, Sun, Moon } from 'lucide-react';
 
@@ -171,28 +170,23 @@ export default function GrievancePortal() {
   // James's Discord user ID
   const DISCORD_USER_ID = "217849233133404161";
 
-  // Patch Notes component (data-driven)
-  const PatchNotes = () => {
-    const latest = Array.isArray(patchNotes?.versions) && patchNotes.versions.length > 0
-      ? patchNotes.versions[0]
-      : { version: '1.0', date: '', items: ['Minor improvements'] };
-    return (
-      <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mb-8 border ${
-        darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20'
-      }`}>
-        <h2 className="text-2xl font-semibold mb-3">
-          <span className={`bg-clip-text text-transparent ${
-            darkMode ? 'bg-gradient-to-r from-pink-400 to-purple-400' : 'bg-gradient-to-r from-pink-600 to-purple-600'
-          }`}>Patch Notes • v{latest.version}</span>
-        </h2>
-        <ul className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} list-disc pl-6 text-sm space-y-1`}>
-          {latest.items?.map((item, idx) => (
-            <li key={idx}>{item}</li>
-          ))}
-        </ul>
-      </div>
-    );
-  };
+  // Patch Notes component (static v1.0)
+  const PatchNotes = () => (
+    <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mb-8 border ${
+      darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20'
+    }`}>
+      <h2 className="text-2xl font-semibold mb-3">
+        <span className={`bg-clip-text text-transparent ${
+          darkMode ? 'bg-gradient-to-r from-pink-400 to-purple-400' : 'bg-gradient-to-r from-pink-600 to-purple-600'
+        }`}>Patch Notes • v1.0</span>
+      </h2>
+      <ul className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} list-disc pl-6 text-sm space-y-1`}>
+        <li>Added Patch Notes section (replaces personal notes)</li>
+        <li>Design pivot to compact layout; green-themed Completed list</li>
+        <li>Role Selection shown on every visit</li>
+      </ul>
+    </div>
+  );
 
   // Load grievances from database
   const loadGrievances = async () => {
