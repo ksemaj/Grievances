@@ -14,8 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npm run update:notes
+      - run: node scripts/update-patch-notes.js
       - run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
