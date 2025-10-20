@@ -66,6 +66,16 @@ code {
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-glow { animation: glow 2s ease-in-out infinite; }
 
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-soft,
+  .fade-out-soft,
+  .animate-float,
+  .animate-glow {
+    animation: none !important;
+  }
+}
+
 /* Default scrollbar */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
