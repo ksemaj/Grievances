@@ -8,15 +8,86 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
+// --- In-app Notification Component ---
+// REMOVE the Notification component entirely
+
+const ROLE_KEY = 'grievanceRole';
+
+const FADE_DURATION = 500; // ms
+
+// Helper to safely stack screens
+function StackFade({ show, children, fadingOut, overlay }) {
+  // overlay === true => fixed overlay (Role Selection), false => normal flow (Portal)
+  if (!show) return null;
+  if (overlay) {
+    return <div className={`fixed inset-0 w-full h-full z-50 overflow-hidden transition-opacity duration-500 ease-out ${fadingOut ? 'opacity-0' : 'opacity-100'}`} style={{ pointerEvents: fadingOut ? 'none' : 'auto', willChange: 'opacity' }}>
+      {children}
+    </div>;
+  }
+  // No stacking for portal: let scroll pass through
+  return <div className={`transition-opacity duration-500 ease-out ${fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} style={{ willChange: 'opacity' }}>{children}</div>;
+}
+
+function RoleSelection({ onSelect }) {
+  // Lock body scroll while the role selection is visible and compensate for scrollbar width
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow || '';
+      document.body.style.paddingRight = previousPaddingRight || '';
+    };
+  }, []);
+
+  return (
+    <div className="relative h-full w-full flex flex-col items-center justify-center">
+      <div className="backdrop-blur-lg bg-white/70 rounded-3xl border-2 border-pink-200 shadow-2xl p-10 m-2 flex flex-col items-center animate-glow transition-all duration-700 ease-in-out">
+        <h2 className="text-3xl md:text-4xl font-extrabold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600">Who are you?</h2>
+        <div className="flex flex-col md:flex-row gap-7 mb-7 w-full justify-center">
+          <button
+            className="flex-1 px-10 py-6 text-2xl font-bold rounded-3xl bg-gradient-to-tr from-purple-500 via-pink-400 to-pink-600 hover:scale-105 active:scale-98 focus:outline-none shadow-xl text-white transition-all duration-300 ease-in-out border-4 border-transparent hover:border-indigo-300"
+            onClick={() => onSelect('boyfriend')}
+            style={{ letterSpacing: 2 }}
+          >
+            James
+          </button>
+          <button
+            className="flex-1 px-10 py-6 text-2xl font-bold rounded-3xl bg-gradient-to-tl from-pink-200 via-purple-100 to-indigo-100 hover:scale-105 active:scale-98 focus:outline-none shadow-lg text-pink-700 transition-all duration-300 ease-in-out border-4 border-transparent hover:border-pink-400"
+            onClick={() => onSelect('girlfriend')}
+            style={{ letterSpacing: 2 }}
+          >
+            Bug ❤️
+          </button>
+        </div>
+        <div className="mt-2 italic text-gray-500 text-sm text-center w-full flex justify-center items-center">
+          Your choice just affects which sections you see.<br/>
+          You can switch any time!
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GrievancePortal() {
   const [grievances, setGrievances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    severity: 'minor'
-  });
+  const [formData, setFormData] = useState({ title: '', description: '', severity: 'minor' });
+  const [role, setRole] = useState(() => localStorage.getItem(ROLE_KEY) || null);
+  // Crossfade state
+  const [transitioning, setTransitioning] = useState(false);
+  const [outgoing, setOutgoing] = useState(null); // 'role' or null
+  const [incoming, setIncoming] = useState(null); // desired role or null
+
+  // James's Discord user ID
+  const DISCORD_USER_ID = "217849233133404161";
 
   // Load grievances from database
   const loadGrievances = async () => {
@@ -75,9 +146,7 @@ export default function GrievancePortal() {
     }
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
+  // REMOVE the unused toggleDarkMode function
 
   const getSeverityColor = (severity) => {
     if (darkMode) {
@@ -97,22 +166,103 @@ export default function GrievancePortal() {
     }
   };
 
-  return (
-    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${
-      darkMode 
-        ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900' 
-        : ''
-    }`}>
-      <div className="max-w-4xl mx-auto">
+  // --- NEW: Mark grievance complete ---
+  const markCompleted = async (id, completed) => {
+    // This assumes a 'completed' bool column exists in Supabase,
+    // otherwise fallback to status, or show UI only
+    const { error } = await supabase
+      .from('grievances')
+      .update({ completed })
+      .eq('id', id);
+    if (error) {
+      alert("Failed to update grievance.\n\nSchema may be missing 'completed' boolean.");
+      return;
+    }
+    loadGrievances();
+  };
+
+  // --- NEW: Split active/completed grievances ---
+  const activeGrievances = grievances.filter(g => !g.completed && g.status !== 'Completed');
+  const completedGrievances = grievances.filter(g => g.completed || g.status === 'Completed');
+
+  //--- Role selection/persistence with crossfade ---
+  const handleRoleSelect = newRole => {
+    setIncoming(newRole);
+    setOutgoing(role); // role is null initially
+    setTransitioning(true);
+    setTimeout(() => {
+      setRole(newRole);
+      localStorage.setItem(ROLE_KEY, newRole);
+      setTransitioning(false);
+      setOutgoing(null);
+      setIncoming(null);
+    }, FADE_DURATION);
+  };
+  const handleRoleSwitch = () => {
+    setOutgoing(role);
+    setIncoming(null);
+    setTransitioning(true);
+    setTimeout(() => {
+      setRole(null);
+      localStorage.removeItem(ROLE_KEY);
+      setTransitioning(false);
+      setOutgoing(null);
+      setIncoming(null);
+    }, FADE_DURATION);
+  };
+
+  // Discord notification handlers
+  const notifyBoyfriend = async () => {
+    try {
+      const { error } = await supabase.functions.invoke("notify-discord", {
+        body: {
+          userId: DISCORD_USER_ID,
+          type: "notify",
+          title: formData.title,
+          description: formData.description
+        }
+      });
+      if (error) throw error;
+      alert("Notified successfully.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to notify. Check function logs.");
+    }
+  };
+
+  const attentionPing = async () => {
+    try {
+      const { error } = await supabase.functions.invoke("notify-discord", {
+        body: {
+          userId: DISCORD_USER_ID,
+          type: "attention",
+          title: formData.title,
+          description: formData.description
+        }
+      });
+      if (error) throw error;
+      alert("Attention ping sent.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to send attention ping.");
+    }
+  };
+
+  //--- PHASE: Which screens to render for crossfade ---
+  const renderPortal = (
+    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900' : ''}`}>  
+      <div className="max-w-4xl mx-auto transition-opacity duration-500 ease-out opacity-100">
         <div className="flex justify-between items-start mb-8">
-          <div className="flex-1"></div>
           <button
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-full transition-all duration-300 ${
-              darkMode 
-                ? 'bg-pink-300 hover:bg-pink-200 text-pink-800' 
-                : 'bg-gray-800 hover:bg-gray-700 text-white'
-            } shadow-lg hover:scale-110`}
+            onClick={handleRoleSwitch}
+            className={`transition-all px-4 py-2 rounded-2xl text-sm mt-2 border font-bold shadow hover:scale-105 active:scale-100 z-30 focus:outline-none ${darkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700 hover:bg-pink-800/60' : 'bg-pink-100 text-pink-800 border-pink-300 hover:bg-pink-200'}`}
+            style={{letterSpacing:2}}
+            title="Switch role? You can show or hide completed grievances.">
+              Switch Role
+          </button>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className={`p-2 rounded-full transition-all duration-300 ${darkMode ? 'bg-pink-300 hover:bg-pink-200 text-pink-800' : 'bg-gray-800 hover:bg-gray-700 text-white'} shadow-lg hover:scale-110`}
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -215,20 +365,33 @@ export default function GrievancePortal() {
               Submit Grievance
             </button>
           </div>
+          
+          {/* Discord notification buttons */}
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={notifyBoyfriend}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-2xl font-semibold hover:from-purple-600 hover:to-pink-700 transition-all duration-300 shadow-md hover:shadow-lg"
+            >
+              Notify Boyfriend
+            </button>
+            <button
+              onClick={attentionPing}
+              className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 rounded-2xl font-semibold hover:from-red-600 hover:to-rose-700 transition-all duration-300 shadow-md hover:shadow-lg"
+            >
+              Attention Button
+            </button>
+          </div>
         </div>
 
-        <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 border hover:shadow-2xl transition-all duration-300 ${
-          darkMode 
-            ? 'bg-gray-800/80 border-gray-700/50' 
-            : 'bg-white/80 border-white/20'
-        }`}>
+        {/* --- FILED (ACTIVE) GRIEVANCES --- */}
+        <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 border hover:shadow-2xl transition-all duration-400 ease-in-out ${darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20'}`}>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">
               <span className={`bg-clip-text text-transparent ${
                 darkMode 
                   ? 'bg-gradient-to-r from-pink-400 to-purple-400' 
                   : 'bg-gradient-to-r from-pink-600 to-purple-600'
-              }`}>Filed Grievances ({grievances.length})</span>
+              }`}>Filed Grievances ({activeGrievances.length})</span>
             </h2>
             <button
               onClick={loadGrievances}
@@ -250,14 +413,14 @@ export default function GrievancePortal() {
               }`}></div>
               <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading grievances... ✨</p>
             </div>
-          ) : grievances.length === 0 ? (
+          ) : activeGrievances.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-6xl mb-4">🌸</div>
-              <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No grievances filed yet. Things are ok.</p>
+              <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No active grievances. Things are ok.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {grievances.map((grievance) => (
+              {activeGrievances.map((grievance) => (
                 <div
                   key={grievance.id}
                   className={`border-2 rounded-2xl p-5 ${getSeverityColor(grievance.severity)} hover:shadow-lg transition-all duration-300 hover:scale-105 transform backdrop-blur-sm ${
@@ -266,26 +429,14 @@ export default function GrievancePortal() {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <h3 className={`font-bold text-lg ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{grievance.title}</h3>
-                    <button
-                      onClick={() => deleteGrievance(grievance.id)}
-                      className={`transition-all duration-300 hover:scale-110 p-1 rounded-lg ${
-                        darkMode 
-                          ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/30' 
-                          : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
-                      }`}
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex gap-2">
+                      <button onClick={() => markCompleted(grievance.id, true)} className={`${darkMode ? 'bg-green-900/40 text-green-300 hover:bg-green-700/60' : 'bg-green-100 text-green-800 hover:bg-green-300'} px-3 py-1 rounded-lg mr-2 transition-all duration-200 font-semibold`}>✓ Complete</button>
+                      <button onClick={() => deleteGrievance(grievance.id)} className={`transition-all duration-300 hover:scale-110 p-1 rounded-lg ${darkMode ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/30' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'}`}><Trash2 size={18} /></button>
+                    </div>
                   </div>
                   <p className={`text-sm mb-4 leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{grievance.description}</p>
                   <div className="flex justify-between items-center text-xs">
-                    <span className={`font-semibold uppercase px-3 py-1 rounded-full ${
-                      darkMode 
-                        ? 'bg-gradient-to-r from-pink-900/50 to-purple-900/50 text-purple-300' 
-                        : 'bg-gradient-to-r from-pink-100 to-purple-100 text-purple-700'
-                    }`}>
-                      {grievance.severity} • {grievance.status}
-                    </span>
+                    <span className={`font-semibold uppercase px-3 py-1 rounded-full ${darkMode ? 'bg-gradient-to-r from-pink-900/50 to-purple-900/50 text-purple-300' : 'bg-gradient-to-r from-pink-100 to-purple-100 text-purple-700'}`}>{grievance.severity} • {grievance.status}</span>
                     <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>{new Date(grievance.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -293,7 +444,63 @@ export default function GrievancePortal() {
             </div>
           )}
         </div>
+
+        {/* --- COMPLETED GRIEVANCES --- */}
+        {role === 'boyfriend' && (
+          <div className={`mt-8 backdrop-blur-sm rounded-3xl shadow-lg p-6 border hover:shadow-2xl transition-all duration-500 ease-in-out ${darkMode ? 'bg-gray-900/80 border-green-900/40' : 'bg-green-50/70 border-green-300/30'}`}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold">
+                <span className={`bg-clip-text text-transparent ${darkMode ? 'bg-gradient-to-r from-lime-400 to-green-300' : 'bg-gradient-to-r from-green-500 to-lime-500'}`}>Completed Grievances ({completedGrievances.length})</span>
+              </h2>
+            </div>
+            {completedGrievances.length === 0 ? (
+              <div className="text-center py-8 opacity-70">
+                <div className="text-5xl mb-4">🍃</div>
+                <p className="text-lg">No completed grievances yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {completedGrievances.map(grievance => (
+                  <div key={grievance.id} className={`border-2 rounded-2xl p-5 ${getSeverityColor(grievance.severity)} hover:shadow-md transition-all duration-300 hover:scale-102 transform backdrop-blur-sm opacity-70 ${darkMode ? 'bg-gray-700/70' : 'bg-green-100/60 border-green-200'}`}>
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className={`font-bold text-lg ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{grievance.title}</h3>
+                      <button onClick={() => markCompleted(grievance.id, false)} className={`${darkMode ? 'bg-yellow-900/40 text-yellow-300 hover:bg-yellow-700/60' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-300'} px-3 py-1 rounded-lg transition-all duration-200 font-semibold`}>↩ Back to Open</button>
+                    </div>
+                    <p className={`text-sm mb-4 leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{grievance.description}</p>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className={`font-semibold uppercase px-3 py-1 rounded-full ${darkMode ? 'bg-gradient-to-r from-green-900/30 to-pink-900/10 text-green-200' : 'bg-gradient-to-r from-green-200 to-pink-100 text-green-700'}`}>{grievance.severity} • Completed</span>
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>{new Date(grievance.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
+  );
+  // --- Dynamic crossfade stack ---
+  return (
+    <>
+      {(() => {
+        const roleSelectionShow = (!role) || (transitioning && (outgoing === null || incoming === null));
+        const roleSelectionFadingOut = transitioning && outgoing === null; // leaving selection -> portal
+
+        const portalShow = (!!role) || (transitioning && (incoming !== null || outgoing !== null));
+        const portalFadingOut = transitioning && incoming === null; // leaving portal -> selection
+
+        return (
+          <>
+            <StackFade show={roleSelectionShow} fadingOut={roleSelectionFadingOut} overlay={true}>
+              <RoleSelection onSelect={handleRoleSelect} />
+            </StackFade>
+            <StackFade show={portalShow} fadingOut={portalFadingOut} overlay={false}>
+              {renderPortal}
+            </StackFade>
+          </>
+        );
+      })()}
+    </>
   );
 }
