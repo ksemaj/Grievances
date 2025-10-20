@@ -178,13 +178,22 @@ export default function GrievancePortal() {
       <h2 className="text-2xl font-semibold mb-3">
         <span className={`bg-clip-text text-transparent ${
           darkMode ? 'bg-gradient-to-r from-pink-400 to-purple-400' : 'bg-gradient-to-r from-pink-600 to-purple-600'
-        }`}>Patch Notes • v1.0</span>
+        }`}>Patch Notes • v1.1</span>
       </h2>
-      <ul className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} list-disc pl-6 text-sm space-y-1`}>
-        <li>Added Patch Notes section (replaces personal notes)</li>
-        <li>Design pivot to compact layout; green-themed Completed list</li>
-        <li>Role Selection shown on every visit</li>
-      </ul>
+      <div
+        className={`${darkMode ? 'bg-gray-900/20' : 'bg-white/40'} rounded-2xl px-4 py-2 h-44 md:h-52 overflow-y-auto`}
+        style={{ scrollbarGutter: 'stable' }}
+      >
+        <ul className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} list-disc pl-6 text-sm space-y-1`}>
+          <li>Dark mode toggle on role selection screen (smooth transition)</li>
+          <li>Independent, subtle parallax on user selection elements</li>
+          <li>Smoother crossfade between selection and portal</li>
+          <li>James theme polish: navy UI and matching scrollbar</li>
+          <li>“Attention NOW” button with pulse; styled notify buttons</li>
+          <li>Title changed to “James’s Inbox”; removed helper tagline</li>
+          <li>“✓ Complete” button restored for active grievances</li>
+        </ul>
+      </div>
     </div>
   );
 
