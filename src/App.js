@@ -1,12 +1,66 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { AlertCircle, Send, Trash2, RefreshCw, Sun, Moon, CheckCircle } from 'lucide-react';
+import { AlertCircle, Send, Trash2, RefreshCw, Sun, Moon, CheckCircle, Lock } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 // Initialize Supabase client
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
+
+// Input validation constants
+const MAX_TITLE_LENGTH = 200;
+const MAX_DESCRIPTION_LENGTH = 2000;
+
+// Rate limiting constants (milliseconds)
+const SUBMISSION_COOLDOWN = 30000; // 30 seconds
+const NOTIFICATION_COOLDOWN = 60000; // 1 minute
+
+// Input sanitization and validation helper
+const sanitizeInput = (text) => {
+  return DOMPurify.sanitize(text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+};
+
+const validateGrievance = (title, description) => {
+  const errors = [];
+  
+  if (!title || title.trim().length === 0) {
+    errors.push('Title is required');
+  } else if (title.length > MAX_TITLE_LENGTH) {
+    errors.push(`Title must be ${MAX_TITLE_LENGTH} characters or less`);
+  }
+  
+  if (!description || description.trim().length === 0) {
+    errors.push('Description is required');
+  } else if (description.length > MAX_DESCRIPTION_LENGTH) {
+    errors.push(`Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`);
+  }
+  
+  return errors;
+};
+
+// Rate limiting helper
+const checkRateLimit = (key, cooldownMs) => {
+  const lastTime = localStorage.getItem(key);
+  if (!lastTime) return true;
+  
+  const elapsed = Date.now() - parseInt(lastTime, 10);
+  return elapsed >= cooldownMs;
+};
+
+const setRateLimit = (key) => {
+  localStorage.setItem(key, Date.now().toString());
+};
+
+const getRemainingCooldown = (key, cooldownMs) => {
+  const lastTime = localStorage.getItem(key);
+  if (!lastTime) return 0;
+  
+  const elapsed = Date.now() - parseInt(lastTime, 10);
+  const remaining = cooldownMs - elapsed;
+  return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+};
 
 // --- In-app Notification Component ---
 // REMOVE the Notification component entirely
@@ -31,6 +85,108 @@ function StackFade({ show, fadingOut, overlay, children }) {
   return (
     <div className={base} style={{ willChange: 'opacity, transform' }}>
       {children}
+    </div>
+  );
+}
+
+// Password Authentication Component
+function PasswordScreen({ onAuthenticated, darkMode, onToggleDarkMode }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isShaking, setIsShaking] = useState(false);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow || '';
+      document.body.style.paddingRight = previousPaddingRight || '';
+    };
+  }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const correctPassword = process.env.REACT_APP_ACCESS_PASSWORD;
+    
+    if (!correctPassword) {
+      setError('Password not configured. Please set REACT_APP_ACCESS_PASSWORD.');
+      return;
+    }
+
+    if (password === correctPassword) {
+      sessionStorage.setItem('authenticated', 'true');
+      onAuthenticated();
+    } else {
+      setError('Incorrect password');
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
+      setPassword('');
+    }
+  };
+
+  return (
+    <div className={`relative min-h-screen w-full flex flex-col items-center justify-center ${
+      darkMode ? 'bg-gradient-to-br from-black via-neutral-900 to-neutral-800' : 'bg-gradient-to-br from-white via-slate-50 to-gray-100'
+    }`}>
+      <div className={`backdrop-blur-lg rounded-3xl border-2 shadow-2xl p-10 m-2 w-full max-w-md ${
+        darkMode ? 'bg-neutral-900/80 border-neutral-700/60' : 'bg-white/80 border-gray-200'
+      } ${isShaking ? 'animate-shake' : ''}`}>
+        <div className="flex flex-col items-center mb-6">
+          <Lock className={`w-16 h-16 mb-4 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+          <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600">
+            Enter Password
+          </h2>
+          <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            This portal is private
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError('');
+            }}
+            placeholder="Enter password"
+            autoFocus
+            className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 outline-none ${
+              darkMode 
+                ? 'border-purple-700 bg-neutral-800 text-white placeholder-gray-400' 
+                : 'border-purple-200 bg-white text-gray-900 placeholder-gray-500'
+            } ${error ? 'border-red-500' : ''}`}
+          />
+          
+          {error && (
+            <p className={`mt-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-2xl font-semibold hover:from-pink-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+          >
+            Unlock
+          </button>
+        </form>
+
+        <button
+          onClick={onToggleDarkMode}
+          className={`mt-6 w-full p-2 rounded-full transition-all duration-300 shadow ${
+            darkMode ? 'bg-neutral-800 text-neutral-200 hover:bg-neutral-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+          }`}
+          aria-label="Toggle dark mode"
+        >
+          {darkMode ? <Sun size={20} className="mx-auto" /> : <Moon size={20} className="mx-auto" />}
+        </button>
+      </div>
     </div>
   );
 }
@@ -93,14 +249,14 @@ function RoleSelection({ onSelect, notes, darkMode, onToggleDarkMode }) {
   };
 
   return (
-    <div className={`relative min-h-screen w-full flex flex-col items-center justify-center ${
+    <div className={`relative min-h-screen w-full flex flex-col items-center justify-center transition-colors duration-500 ${
       darkMode ? 'bg-gradient-to-br from-black via-neutral-900 to-neutral-800' : 'bg-gradient-to-br from-white via-slate-50 to-gray-100'
     }`}>
       <div
         ref={cardRef}
         onMouseMove={handleMove}
         onMouseLeave={handleLeave}
-        className={`backdrop-blur-lg rounded-3xl border-2 shadow-2xl p-10 m-2 flex flex-col items-center ${
+        className={`backdrop-blur-lg rounded-3xl border-2 shadow-2xl p-10 m-2 flex flex-col items-center transition-colors duration-500 ${
           darkMode ? 'bg-neutral-900/80 border-neutral-700/60' : 'bg-white/80 border-gray-200'
         }`}
       >
@@ -108,7 +264,7 @@ function RoleSelection({ onSelect, notes, darkMode, onToggleDarkMode }) {
           <h2 className="text-3xl md:text-4xl font-extrabold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600" style={{ transform: titleT, transition: 'transform 180ms ease-out', willChange: 'transform' }}>Who are you?</h2>
           <div className="flex flex-col md:flex-row gap-7 mb-7 w-full justify-center">
             <button
-              className={`flex-1 px-10 py-6 text-2xl font-bold rounded-3xl transition-all duration-300 ease-in-out border-4 shadow-xl ${
+              className={`flex-1 px-10 py-6 text-2xl font-bold rounded-3xl transition-all duration-500 ease-in-out border-4 shadow-xl ${
                 darkMode
                   ? 'text-neutral-200 bg-gradient-to-tr from-neutral-800 via-neutral-800 to-neutral-700 border-neutral-700 hover:border-neutral-500'
                   : 'text-white bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-700 border-transparent hover:border-blue-300'
@@ -119,7 +275,7 @@ function RoleSelection({ onSelect, notes, darkMode, onToggleDarkMode }) {
               James
             </button>
             <button
-              className={`flex-1 px-10 py-6 text-2xl font-bold rounded-3xl transition-all duration-300 ease-in-out border-4 shadow-lg hover:scale-105 active:scale-98 ${
+              className={`flex-1 px-10 py-6 text-2xl font-bold rounded-3xl transition-all duration-500 ease-in-out border-4 shadow-lg hover:scale-105 active:scale-98 ${
                 darkMode
                   ? 'text-neutral-200 bg-gradient-to-tl from-neutral-800 via-neutral-900 to-black border-neutral-700 hover:border-neutral-500'
                   : 'border-transparent bg-gradient-to-tl from-pink-200 via-purple-100 to-indigo-100 text-pink-700 hover:border-pink-400'
@@ -138,7 +294,7 @@ function RoleSelection({ onSelect, notes, darkMode, onToggleDarkMode }) {
         )}
         <button
           onClick={onToggleDarkMode}
-          className={`mt-4 p-2 rounded-full transition-[background-color,transform] duration-500 ease-out shadow hover:scale-105 active:scale-95 ${
+          className={`mt-4 p-2 rounded-full transition-all duration-500 ease-out shadow hover:scale-105 active:scale-95 ${
             darkMode ? 'bg-neutral-800 text-neutral-200 hover:bg-neutral-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
           }`}
           style={{ transform: toggleT, transition: 'transform 180ms ease-out', willChange: 'transform' }}
@@ -146,7 +302,7 @@ function RoleSelection({ onSelect, notes, darkMode, onToggleDarkMode }) {
         >
           {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
-        <div className={`mt-2 italic text-sm text-center w-full flex justify-center items-center ${darkMode ? 'text-neutral-400' : 'text-gray-500'}`} style={{ transform: helperT, transition: 'transform 180ms ease-out', willChange: 'transform' }}>
+        <div className={`mt-2 italic text-sm text-center w-full flex justify-center items-center transition-colors duration-500 ${darkMode ? 'text-neutral-400' : 'text-gray-500'}`} style={{ transform: helperT, transition: 'transform 180ms ease-out', willChange: 'transform' }}>
           Your choice just affects which sections you see.<br/>
           You can switch any time!
         </div>
@@ -169,31 +325,121 @@ export default function GrievancePortal() {
   // Submission overlay state
   const [showSubmitOverlay, setShowSubmitOverlay] = useState(false);
   const [submitOverlayFadingOut, setSubmitOverlayFadingOut] = useState(false);
+  // Authentication state
+  const [authenticated, setAuthenticated] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
-  // James's Discord user ID
-  const DISCORD_USER_ID = "217849233133404161";
+  // James's Discord user ID from environment variable
+  const DISCORD_USER_ID = process.env.REACT_APP_DISCORD_USER_ID;
 
-  // Patch Notes component (static v1.0)
+  // Check authentication on mount
+  useEffect(() => {
+    const isAuth = sessionStorage.getItem('authenticated') === 'true';
+    setAuthenticated(isAuth);
+  }, []);
+
+  // AFK Timer - Auto-logout after inactivity
+  const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
+  const WARNING_TIME = 2 * 60 * 1000; // Show warning 2 minutes before logout
+  const [showAfkWarning, setShowAfkWarning] = useState(false);
+  const [afkCountdown, setAfkCountdown] = useState(120); // 2 minutes in seconds
+  const inactivityTimerRef = useRef(null);
+  const warningTimerRef = useRef(null);
+  const countdownIntervalRef = useRef(null);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('authenticated');
+    setAuthenticated(false);
+    setShowAfkWarning(false);
+    setRole(null);
+  };
+
+  const resetInactivityTimer = () => {
+    // Clear existing timers
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    
+    // Hide warning if it was showing
+    setShowAfkWarning(false);
+    setAfkCountdown(120);
+
+    // Only set timers if authenticated
+    if (authenticated) {
+      // Set warning timer (shows 2 minutes before logout)
+      warningTimerRef.current = setTimeout(() => {
+        setShowAfkWarning(true);
+        setAfkCountdown(120);
+        
+        // Start countdown
+        countdownIntervalRef.current = setInterval(() => {
+          setAfkCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(countdownIntervalRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }, INACTIVITY_TIMEOUT - WARNING_TIME);
+
+      // Set logout timer
+      inactivityTimerRef.current = setTimeout(() => {
+        handleLogout();
+      }, INACTIVITY_TIMEOUT);
+    }
+  };
+
+  // Track user activity
+  useEffect(() => {
+    if (!authenticated) return;
+
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+
+    // Start initial timer
+    resetInactivityTimer();
+
+    // Cleanup
+    return () => {
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
+  }, [authenticated]);
+
+  // Patch Notes component (static v1.3)
   const PatchNotes = () => (
-    <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mb-8 border ${
-      darkMode ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-white/20'
+    <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-6 mb-8 border transition-colors duration-500 ${
+      darkMode ? 'bg-neutral-900/90 border-neutral-700/60' : 'bg-white/80 border-white/20'
     }`}>
       <h2 className="text-2xl font-semibold mb-3">
         <span className={`bg-clip-text text-transparent ${
           darkMode ? 'bg-gradient-to-r from-pink-400 to-purple-400' : 'bg-gradient-to-r from-pink-600 to-purple-600'
-        }`}>Patch Notes • v1.2</span>
+        }`}>Patch Notes • v1.3</span> 🔐
       </h2>
       <div
-        className={`${darkMode ? 'bg-gray-900/20' : 'bg-white/40'} rounded-2xl px-4 py-2 h-44 md:h-52 overflow-y-auto`}
+        className={`${darkMode ? 'bg-black/30' : 'bg-white/40'} rounded-2xl px-4 py-2 h-44 md:h-52 overflow-y-auto transition-colors duration-500`}
         style={{ scrollbarGutter: 'stable' }}
       >
-        <ul className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} list-disc pl-6 text-sm space-y-1`}>
-          <li>Auto-notify James on every new grievance</li>
-          <li>New blurred, fading confirmation overlay after submit</li>
-          <li>Notify/Attention buttons disable while sending</li>
-          <li>Smoother crossfade via GPU compositing hint</li>
-          <li>Reduced-motion support for fades and animations</li>
-          <li>PWA icons: iOS 180×180 and maskable Android icons</li>
+        <ul className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} list-disc pl-6 text-sm space-y-1 transition-colors duration-500`}>
+          <li><strong>Major Security Update!</strong></li>
+          <li>Password protection - shared access control</li>
+          <li>Auto-logout after 15 min idle (2-min warning)</li>
+          <li>Input validation with character limits (200/2000)</li>
+          <li>XSS protection with DOMPurify sanitization</li>
+          <li>Rate limiting: 30s submissions, 60s notifications</li>
+          <li>CORS restricted to production domain only</li>
+          <li>Content Security Policy headers added</li>
+          <li>Real-time character counters on inputs</li>
+          <li>Enhanced error messages with auto-dismiss</li>
+          <li>Improved mobile touch event tracking</li>
         </ul>
       </div>
     </div>
@@ -221,47 +467,68 @@ export default function GrievancePortal() {
   }, []);
 
   const handleSubmit = async () => {
-    if (formData.title.trim() && formData.description.trim()) {
-      const newGrievance = {
-        title: formData.title,
-        description: formData.description,
-        severity: formData.severity,
-        status: 'Under Review'
-      };
+    // Validate input
+    const errors = validateGrievance(formData.title, formData.description);
+    if (errors.length > 0) {
+      setValidationError(errors.join('. '));
+      setTimeout(() => setValidationError(''), 5000);
+      return;
+    }
 
-      const { error } = await supabase
-        .from('grievances')
-        .insert([newGrievance]);
+    // Check rate limit
+    if (!checkRateLimit('lastSubmission', SUBMISSION_COOLDOWN)) {
+      const remaining = getRemainingCooldown('lastSubmission', SUBMISSION_COOLDOWN);
+      setValidationError(`Please wait ${remaining} seconds before submitting another grievance.`);
+      setTimeout(() => setValidationError(''), 5000);
+      return;
+    }
 
-      if (error) {
-        console.error('Error submitting grievance:', error);
-        alert('Failed to submit grievance. Please try again.');
-      } else {
-        setFormData({ title: '', description: '', severity: 'minor' });
-        loadGrievances(); // Reload to show new grievance
-        // Show transient confirmation overlay
-        setShowSubmitOverlay(true);
-        setSubmitOverlayFadingOut(false);
-        setTimeout(() => {
-          setSubmitOverlayFadingOut(true);
-          setTimeout(() => setShowSubmitOverlay(false), FADE_MS);
-        }, 2200);
-        // Always notify James after a successful submission
-        try {
-          const { error: notifyError } = await supabase.functions.invoke("notify-discord", {
-            body: {
-              userId: DISCORD_USER_ID,
-              type: "notify",
-              title: newGrievance.title,
-              description: newGrievance.description
-            }
-          });
-          if (notifyError) throw notifyError;
-          // overlay provides confirmation
-        } catch (e) {
-          console.error('Notification failed:', e);
-          // overlay shows success; errors are silent here
-        }
+    // Sanitize input
+    const sanitizedTitle = sanitizeInput(formData.title.trim());
+    const sanitizedDescription = sanitizeInput(formData.description.trim());
+
+    const newGrievance = {
+      title: sanitizedTitle,
+      description: sanitizedDescription,
+      severity: formData.severity,
+      status: 'Under Review'
+    };
+
+    const { error } = await supabase
+      .from('grievances')
+      .insert([newGrievance]);
+
+    if (error) {
+      console.error('Error submitting grievance:', error);
+      setValidationError('Failed to submit grievance. Please try again.');
+      setTimeout(() => setValidationError(''), 5000);
+    } else {
+      setRateLimit('lastSubmission');
+      setFormData({ title: '', description: '', severity: 'minor' });
+      setValidationError('');
+      loadGrievances(); // Reload to show new grievance
+      // Show transient confirmation overlay
+      setShowSubmitOverlay(true);
+      setSubmitOverlayFadingOut(false);
+      setTimeout(() => {
+        setSubmitOverlayFadingOut(true);
+        setTimeout(() => setShowSubmitOverlay(false), FADE_MS);
+      }, 2200);
+      // Always notify James after a successful submission
+      try {
+        const { error: notifyError } = await supabase.functions.invoke("notify-discord", {
+          body: {
+            userId: DISCORD_USER_ID,
+            type: "notify",
+            title: sanitizedTitle,
+            description: sanitizedDescription
+          }
+        });
+        if (notifyError) throw notifyError;
+        // overlay provides confirmation
+      } catch (e) {
+        console.error('Notification failed:', e);
+        // overlay shows success; errors are silent here
       }
     }
   };
@@ -338,6 +605,15 @@ export default function GrievancePortal() {
 
   const notifyBoyfriend = async () => {
     if (sendingNotify) return;
+    
+    // Check rate limit
+    if (!checkRateLimit('lastNotification', NOTIFICATION_COOLDOWN)) {
+      const remaining = getRemainingCooldown('lastNotification', NOTIFICATION_COOLDOWN);
+      setValidationError(`Please wait ${remaining} seconds before sending another notification.`);
+      setTimeout(() => setValidationError(''), 5000);
+      return;
+    }
+
     setSendingNotify(true);
     try {
       const { error } = await supabase.functions.invoke("notify-discord", {
@@ -349,16 +625,27 @@ export default function GrievancePortal() {
         }
       });
       if (error) throw error;
+      setRateLimit('lastNotification');
       // success
     } catch (e) {
       console.error(e);
-      // failure
+      setValidationError('Failed to send notification. Please try again.');
+      setTimeout(() => setValidationError(''), 5000);
     }
     setSendingNotify(false);
   };
 
   const attentionPing = async () => {
     if (sendingAttention) return;
+    
+    // Check rate limit
+    if (!checkRateLimit('lastAttention', NOTIFICATION_COOLDOWN)) {
+      const remaining = getRemainingCooldown('lastAttention', NOTIFICATION_COOLDOWN);
+      setValidationError(`Please wait ${remaining} seconds before sending another attention ping.`);
+      setTimeout(() => setValidationError(''), 5000);
+      return;
+    }
+
     setSendingAttention(true);
     try {
       const { error } = await supabase.functions.invoke("notify-discord", {
@@ -370,10 +657,12 @@ export default function GrievancePortal() {
         }
       });
       if (error) throw error;
+      setRateLimit('lastAttention');
       // success
     } catch (e) {
       console.error(e);
-      // failure
+      setValidationError('Failed to send attention ping. Please try again.');
+      setTimeout(() => setValidationError(''), 5000);
     }
     setSendingAttention(false);
   };
@@ -463,15 +752,27 @@ export default function GrievancePortal() {
                   : 'bg-gradient-to-r from-pink-600 to-purple-600'
               }`}>Submit New Grievance</span>
             </h2>
+            {validationError && (
+              <div className={`p-3 rounded-xl border-2 ${
+                darkMode ? 'bg-red-900/20 border-red-700 text-red-300' : 'bg-red-50 border-red-300 text-red-700'
+              }`}>
+                <p className="text-sm font-semibold">{validationError}</p>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   The Incident... 🚨
+                  <span className={`ml-2 text-xs ${formData.title.length > MAX_TITLE_LENGTH ? 'text-red-500' : ''}`}>
+                    ({formData.title.length}/{MAX_TITLE_LENGTH})
+                  </span>
                 </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  maxLength={MAX_TITLE_LENGTH}
                   className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all duration-300 outline-none ${
                     darkMode 
                       ? 'border-pink-700 hover:border-pink-600 bg-gradient-to-r from-gray-800 to-purple-900 text-white placeholder-gray-400' 
@@ -484,10 +785,14 @@ export default function GrievancePortal() {
               <div>
                 <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Your point of view 💭
+                  <span className={`ml-2 text-xs ${formData.description.length > MAX_DESCRIPTION_LENGTH ? 'text-red-500' : ''}`}>
+                    ({formData.description.length}/{MAX_DESCRIPTION_LENGTH})
+                  </span>
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  maxLength={MAX_DESCRIPTION_LENGTH}
                   rows="4"
                   className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-2 focus:ring-white focus:border-white transition-all duration-300 resize-none outline-none ${
                     darkMode 
@@ -607,7 +912,7 @@ export default function GrievancePortal() {
                   }`}>
                     <div className="flex justify-between items-start mb-4">
                       <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {grievance.title}
+                        {sanitizeInput(grievance.title)}
                       </h3>
                       <div className="flex items-center gap-2">
                         <button
@@ -628,7 +933,7 @@ export default function GrievancePortal() {
                         </button>
                       </div>
                     </div>
-                    <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{grievance.description}</p>
+                    <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{sanitizeInput(grievance.description)}</p>
                     <div className="flex justify-between items-center mt-4 text-xs">
                       <span className={`font-semibold uppercase px-3 py-1 rounded-full ${darkMode ? 'bg-gradient-to-r from-pink-900/50 to-purple-900/50 text-purple-300' : 'bg-gradient-to-r from-pink-100 to-purple-100 text-purple-700'}`}>
                         {grievance.severity} • {grievance.status}
@@ -691,7 +996,7 @@ export default function GrievancePortal() {
                   }`}>
                     <div className="flex justify-between items-start mb-4">
                       <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {grievance.title}
+                        {sanitizeInput(grievance.title)}
                       </h3>
                       <button
                         onClick={() => markCompleted(grievance.id, false)}
@@ -700,7 +1005,7 @@ export default function GrievancePortal() {
                         ↩ Back to Open
                       </button>
                     </div>
-                    <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{grievance.description}</p>
+                    <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{sanitizeInput(grievance.description)}</p>
                     <div className="flex justify-between items-center mt-4 text-xs">
                       <span className={`font-semibold uppercase px-3 py-1 rounded-full ${
                         darkMode ? 'bg-gradient-to-r from-green-900/30 to-pink-900/10 text-green-200' : 'bg-gradient-to-r from-green-200 to-pink-100 text-green-700'
@@ -724,6 +1029,11 @@ export default function GrievancePortal() {
   const selectionFadingOut = transitioning && outgoing === 'selection';
   const showPortal = (role) || (transitioning && (incoming === 'portal' || outgoing === 'portal'));
   const portalFadingOut = transitioning && outgoing === 'portal';
+
+  // If not authenticated, show password screen
+  if (!authenticated) {
+    return <PasswordScreen onAuthenticated={() => setAuthenticated(true)} darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} />;
+  }
 
   return (
     <>
@@ -749,6 +1059,34 @@ export default function GrievancePortal() {
           </div>
         </div>
       </StackFade>
+      {/* AFK Warning overlay */}
+      {showAfkWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-fadeIn">
+          <div className={`rounded-3xl border-2 shadow-2xl p-8 m-4 max-w-md ${darkMode ? 'bg-neutral-900/95 border-yellow-700 text-neutral-100' : 'bg-white/95 border-yellow-400 text-gray-900'}`}>
+            <div className="flex flex-col items-center text-center">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${darkMode ? 'bg-yellow-900/40' : 'bg-yellow-100'}`}>
+                <AlertCircle className={`${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} size={32} />
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Still there?</h3>
+              <p className={`mb-4 ${darkMode ? 'text-neutral-300' : 'text-gray-600'}`}>
+                You've been inactive for a while.
+              </p>
+              <div className={`text-5xl font-bold mb-4 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                {Math.floor(afkCountdown / 60)}:{String(afkCountdown % 60).padStart(2, '0')}
+              </div>
+              <p className={`mb-6 text-sm ${darkMode ? 'text-neutral-400' : 'text-gray-500'}`}>
+                You'll be logged out automatically for security.
+              </p>
+              <button
+                onClick={resetInactivityTimer}
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 px-6 rounded-2xl font-semibold hover:from-pink-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+              >
+                I'm Still Here!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

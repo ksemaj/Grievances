@@ -63,15 +63,30 @@ code {
   50% { box-shadow: 0 0 30px rgba(236, 72, 153, 0.6); }
 }
 
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+  20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-glow { animation: glow 2s ease-in-out infinite; }
+.animate-shake { animation: shake 0.5s ease-in-out; }
+.animate-fadeIn { animation: fadeIn 0.3s ease-out; }
 
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .fade-in-soft,
   .fade-out-soft,
   .animate-float,
-  .animate-glow {
+  .animate-glow,
+  .animate-shake,
+  .animate-fadeIn {
     animation: none !important;
   }
 }
