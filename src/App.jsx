@@ -267,11 +267,7 @@ export default function GrievancePortal() {
     }
   };
 
-  // REMOVE the unused toggleDarkMode function
-
-  // Removed unused getSeverityColor helper
-
-  // --- NEW: Mark grievance complete ---
+  // Mark grievance complete
   const markCompleted = async (id, completed) => {
     // This assumes a 'completed' bool column exists in Supabase,
     // otherwise fallback to status, or show UI only
@@ -405,9 +401,7 @@ export default function GrievancePortal() {
     setSendingAttention(false);
   };
 
-  // Notes feature removed in v1.0
-
-  //--- PHASE: Which screens to render for crossfade ---
+  // Which screens to render for crossfade
   const activeRole = (transitioning && incoming === 'portal') ? (pendingRole ?? role) : role;
   // Apply a body class for James theme (used for scrollbar styling)
   useEffect(() => {
