@@ -5,8 +5,8 @@ import DOMPurify from 'dompurify';
 
 // Initialize Supabase client
 const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
 // Input validation constants
@@ -111,10 +111,10 @@ function PasswordScreen({ onAuthenticated, darkMode, onToggleDarkMode }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const correctPassword = process.env.REACT_APP_ACCESS_PASSWORD;
-    
+    const correctPassword = import.meta.env.VITE_ACCESS_PASSWORD;
+
     if (!correctPassword) {
-      setError('Password not configured. Please set REACT_APP_ACCESS_PASSWORD.');
+      setError('Password not configured. Please set VITE_ACCESS_PASSWORD.');
       return;
     }
 
@@ -330,7 +330,7 @@ export default function GrievancePortal() {
   const [validationError, setValidationError] = useState('');
 
   // James's Discord user ID from environment variable
-  const DISCORD_USER_ID = process.env.REACT_APP_DISCORD_USER_ID;
+  const DISCORD_USER_ID = import.meta.env.VITE_DISCORD_USER_ID;
 
   // Check authentication on mount
   useEffect(() => {
