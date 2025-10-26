@@ -43,6 +43,21 @@ VITE_DISCORD_USER_ID=discord-user-id
 
 See `docs/setup/ENVIRONMENT_SETUP.md` for detailed configuration instructions.
 
+### PostCSS Configuration (Required for Tailwind)
+
+Vite requires PostCSS to process Tailwind CSS. The project includes `postcss.config.js`:
+
+```javascript
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+```
+
+**If styling doesn't load**: This file must exist in the project root. Without it, Tailwind classes won't be processed and the app will have no styling.
+
 ## Architecture & Key Patterns
 
 ### Modular Architecture (v2.0)
@@ -306,13 +321,18 @@ docs/
   features/           # Feature documentation (AFK timer)
 
 public/
-  index.html          # HTML template with CSP headers (moved from public/ in CRA)
   manifest.json       # PWA configuration
+  favicon.ico         # Favicon
   icons/              # iOS and Android icons
+  logo192.png         # PWA icon 192x192
+  logo512.png         # PWA icon 512x512
 
 scripts/
   update-patch-notes.js  # Syncs patchNotes.json to App.jsx
 
+index.html            # Vite HTML entry point (root directory)
+postcss.config.js     # PostCSS configuration (required for Tailwind)
+tailwind.config.js    # Tailwind CSS configuration
 vite.config.js        # Vite configuration
 package.json          # Dependencies and scripts
 ```
@@ -321,7 +341,7 @@ package.json          # Dependencies and scripts
 
 ### Test Coverage
 
-- Basic smoke tests in `src/App.test.jsx`
+- Basic smoke tests in `src/App.test.js`
 - Manual testing checklist in `docs/security/SECURITY_IMPLEMENTATION_SUMMARY.md`
 
 ### Key Test Scenarios
@@ -366,6 +386,16 @@ Verify all event listeners are attached (App.jsx:149) and timers aren't being cl
 2. Ensure all imports are correct
 3. Verify environment variables are set
 4. Run `npm run build` to see detailed errors
+
+### Tailwind CSS not loading / No styling
+
+If the app loads but has no styling (plain unstyled HTML):
+
+1. **Check PostCSS config exists**: Verify `postcss.config.js` is in project root
+2. **Verify Tailwind content paths**: Check `tailwind.config.js` includes `"./index.html"` and `"./src/**/*.{js,jsx,ts,tsx}"`
+3. **Clear Vite cache**: Delete `node_modules/.vite` and restart dev server
+4. **Hard refresh browser**: Cmd+Shift+R (Mac) or Ctrl+Shift+F5 (Windows)
+5. **Check console for errors**: Look for CSS loading errors in browser DevTools
 
 ## Code Style & Conventions
 
