@@ -1,6 +1,32 @@
 {
   "versions": [
     {
+      "version": "1.5",
+      "date": "2025-10-26",
+      "items": [
+        "fix: Restore dynamic patch notes from patchNotes.json",
+        "docs: Update documentation and patch notes for v2.0",
+        "chore: Remove dead code comments (Phase 8-13)",
+        "refactor: Extract components, utilities, and constants (Phase 4-7)",
+        "fix: Critical bug fixes (Phase 3)",
+        "refactor: Migrate from Create React App to Vite",
+        "docs: Add CLAUDE.md for future Claude Code instances",
+        "Merge v1.3 🔐 - Major Security Hardening Update into main",
+        "feat: v1.3 🔐 - Major Security Hardening Update",
+        "Remove Analytics debug mode",
+        "Enable Vercel Analytics debug mode",
+        "Add Vercel Analytics integration",
+        "resolve_readme_merge_for_v1.2",
+        "chore: update patch notes & bump version",
+        "release_v1.2",
+        "Update README.md",
+        "merge: resolve conflicts using beta versions (v1.1)",
+        "chore: update patch notes & bump version",
+        "release: v1.1 patch notes and fixed-height notes box",
+        "chore: update patch notes & bump version"
+      ]
+    },
+    {
       "version": "1.4",
       "date": "2025-10-20",
       "items": [
