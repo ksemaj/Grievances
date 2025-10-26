@@ -1,6 +1,32 @@
 {
   "versions": [
     {
+      "version": "2.3",
+      "date": "2025-10-26",
+      "items": [
+        "feat: Release v2.2 - Real-Time Sync & UI Improvements 🔄",
+        "feat: Release v2.0 - Complete Vite Migration 🚀",
+        "docs: Complete CLAUDE.md audit and corrections",
+        "chore: Remove old CRA files and backups",
+        "docs: Update all documentation for Vite migration",
+        "fix: Add PostCSS config and update Tailwind content paths for Vite",
+        "chore: update patch notes & bump version",
+        "fix: Restore dynamic patch notes from patchNotes.json",
+        "docs: Update documentation and patch notes for v2.0",
+        "chore: Remove dead code comments (Phase 8-13)",
+        "refactor: Extract components, utilities, and constants (Phase 4-7)",
+        "fix: Critical bug fixes (Phase 3)",
+        "refactor: Migrate from Create React App to Vite",
+        "docs: Add CLAUDE.md for future Claude Code instances",
+        "Merge v1.3 🔐 - Major Security Hardening Update into main",
+        "feat: v1.3 🔐 - Major Security Hardening Update",
+        "Remove Analytics debug mode",
+        "Enable Vercel Analytics debug mode",
+        "Add Vercel Analytics integration",
+        "resolve_readme_merge_for_v1.2"
+      ]
+    },
+    {
       "version": "2.2",
       "date": "2025-10-26",
       "items": [
