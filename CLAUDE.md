@@ -6,21 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A lightweight React PWA for submitting and managing grievances between two users ("Bug" and "James"). Features shared password authentication, auto-logout timer, Discord notifications, dual role views, and comprehensive security hardening.
 
-**Tech Stack**: React 19, Tailwind CSS, Supabase (Postgres + Edge Functions), DOMPurify, Lucide icons
+**Tech Stack**: React 19, **Vite 7** ⚡, Tailwind CSS, Supabase (Postgres + Edge Functions), DOMPurify, Lucide icons
 
 ## Development Commands
 
 ### Local Development
 ```bash
 npm install              # Install dependencies
-npm start                # Start dev server (localhost:3000)
-npm test                 # Run tests in watch mode
-npm run build            # Production build
+npm run dev              # Start Vite dev server (localhost:3000)
+npm test                 # Run tests with vitest
+npm run build            # Production build (~1s with Vite!)
+npm run preview          # Preview production build
 ```
 
 ### Testing Single Files
 ```bash
-npm test -- App.test.js  # Run specific test file
+npm test -- App.test.jsx  # Run specific test file
 ```
 
 ### Utility Scripts
@@ -32,33 +33,59 @@ npm run update:notes     # Update patch notes from patchNotes.json
 
 Create `.env.local` with required variables:
 ```bash
-REACT_APP_SUPABASE_URL=your-supabase-url
-REACT_APP_SUPABASE_ANON_KEY=your-anon-key
-REACT_APP_ACCESS_PASSWORD=shared-password
-REACT_APP_DISCORD_USER_ID=discord-user-id
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_ACCESS_PASSWORD=shared-password
+VITE_DISCORD_USER_ID=discord-user-id
 ```
+
+**Note**: All environment variables use `VITE_` prefix (changed from `REACT_APP_` after Vite migration).
 
 See `docs/setup/ENVIRONMENT_SETUP.md` for detailed configuration instructions.
 
 ## Architecture & Key Patterns
 
-### Single-Component Architecture
-The entire application lives in `src/App.js` (~1100 lines). This is intentional for this small project. Main sections:
+### Modular Architecture (v2.0)
+
+The application is now organized into modular components and utilities:
+
+```
+src/
+├── components/          # Reusable UI components
+│   ├── PasswordScreen.jsx
+│   ├── RoleSelection.jsx
+│   ├── PatchNotes.jsx
+│   └── StackFade.jsx
+├── hooks/               # Custom React hooks (future)
+├── utils/               # Pure utility functions
+│   ├── sanitize.js      # XSS protection with DOMPurify
+│   ├── validate.js      # Form validation logic
+│   └── rateLimit.js     # Client-side rate limiting
+├── constants/           # Configuration constants
+│   └── config.js        # All magic numbers and config values
+├── services/            # External service integrations
+│   └── supabase.js      # Supabase client + env validation
+├── App.jsx              # Main application (~825 lines, down from 1091!)
+└── main.jsx             # Vite entry point
+```
+
+### Main Application Flow
 
 1. **Authentication Layer** (`PasswordScreen` component)
-   - Validates against `REACT_APP_ACCESS_PASSWORD`
+   - Validates against `VITE_ACCESS_PASSWORD`
    - Uses `sessionStorage` for persistence (no re-login on refresh)
    - Blocks all content until authenticated
 
 2. **Role Selection** (`RoleSelection` component)
    - Session-only role storage (not persisted)
    - Two roles: "boyfriend" (James's inbox view) and "girlfriend" (Bug's submission view)
-   - Smooth crossfade transitions between views using `StackFade` helper
+   - Smooth crossfade transitions using `StackFade` component
 
-3. **AFK Timer** (lines 341-415 in App.js)
+3. **AFK Timer** (in App.jsx:302-373)
    - 15-minute inactivity timeout with 2-minute warning
    - Tracks multiple event types: `mousedown`, `mousemove`, `keypress`, `scroll`, `touchstart`, `click`
    - Auto-logout on timeout, clears session
+   - Uses `useCallback` to prevent stale closures
 
 4. **Main Portal Views**
    - **Girlfriend View**: Submit grievance form with Discord notification buttons
@@ -66,6 +93,7 @@ The entire application lives in `src/App.js` (~1100 lines). This is intentional 
    - Both views share the same data, just filtered differently
 
 ### State Management
+
 All state is component-local using React hooks. No Redux/Context needed:
 - `grievances[]`: All grievances from Supabase
 - `role`: Current user role (null = show selection screen)
@@ -74,6 +102,7 @@ All state is component-local using React hooks. No Redux/Context needed:
 - `formData`: Controlled inputs for grievance submission
 
 ### Data Flow
+
 ```
 Supabase DB (grievances table)
     ↓ loadGrievances()
@@ -83,12 +112,13 @@ Supabase DB (grievances table)
 ```
 
 ### Crossfade Transition System
-Uses a custom `StackFade` component with coordinated state:
+
+Uses the `StackFade` component with coordinated state:
 - `outgoing`: Screen fading out ('selection' | 'portal')
 - `incoming`: Screen fading in ('selection' | 'portal')
 - `transitioning`: Boolean lock to prevent multiple transitions
 - `pendingRole`: Role to apply after transition completes
-- 700ms transition duration (const `FADE_MS`)
+- 700ms transition duration (from `FADE_DURATION` constant)
 
 ## Security Implementation
 
@@ -97,21 +127,36 @@ Uses a custom `StackFade` component with coordinated state:
 1. **Password Authentication**: Client-side shared password (sessionStorage)
 2. **Auto-Logout**: 15-min inactivity with 2-min warning
 3. **Input Validation**: Title (200 chars), Description (2000 chars)
-4. **XSS Protection**: DOMPurify sanitization on all user input (src/App.js:21-23)
+4. **XSS Protection**: DOMPurify sanitization with safe HTML formatting allowed
 5. **Rate Limiting**: 30s for submissions, 60s for notifications (localStorage-based)
 6. **CORS**: Discord Edge Function restricted to production domain only
-7. **CSP**: Content Security Policy headers in `public/index.html`
+7. **CSP**: Content Security Policy headers in `index.html`
 8. **RLS**: Row-Level Security policies for Supabase (see setup guide)
+9. **Env Validation**: Supabase service validates required environment variables on startup
 
 ### Critical Security Functions
-- `sanitizeInput()` (line 21): Strips all HTML tags before display/storage
-- `validateGrievance()` (line 25): Enforces character limits
-- `checkRateLimit()` / `setRateLimit()` (lines 44-54): Client-side rate limiting
-- Always sanitize before: database insert, UI display, Discord notification
+
+**In `src/utils/sanitize.js`:**
+- `sanitizeInput(text, allowFormatting=true)`: Strips dangerous HTML, allows `<b>`, `<i>`, `<em>`, `<strong>`, `<br>` for formatting
+
+**In `src/utils/validate.js`:**
+- `validateGrievance(title, description)`: Enforces character limits, returns error array
+
+**In `src/utils/rateLimit.js`:**
+- `checkRateLimit(key, cooldownMs)`: Returns true if action allowed
+- `setRateLimit(key)`: Marks action as performed
+- `getRemainingCooldown(key, cooldownMs)`: Returns seconds remaining
+
+**In `src/services/supabase.js`:**
+- `getAccessPassword()`: Validates and returns password (throws if missing)
+- `getDiscordUserId()`: Returns Discord user ID (warns if missing)
+
+Always sanitize before: database insert, UI display, Discord notification.
 
 ## Supabase Integration
 
 ### Database Schema
+
 Table: `grievances`
 - `id`: UUID (primary key)
 - `title`: text
@@ -122,6 +167,7 @@ Table: `grievances`
 - `created_at`: timestamp
 
 ### Edge Function
+
 `supabase/functions/notify-discord/index.ts`
 - Sends Discord mentions via webhook
 - Types: `notify` (standard) or `attention` (urgent ping)
@@ -129,11 +175,13 @@ Table: `grievances`
 - Requires `DISCORD_WEBHOOK_URL` secret in Supabase
 
 ### RLS Setup
+
 **IMPORTANT**: After database changes, follow `docs/setup/SUPABASE_RLS_SETUP.md` to apply security policies. The app uses permissive policies (allows all with anon key) since password protection is the primary auth layer.
 
 ## UI/UX Patterns
 
 ### Theming
+
 - **Dark Mode**: Toggle persists in component state (not localStorage)
 - **Role-Based Themes**:
   - Girlfriend (Bug): Pink/purple gradients
@@ -141,6 +189,7 @@ Table: `grievances`
 - **James Theme**: Body class `james-theme` for custom scrollbar styling
 
 ### Animations
+
 - Crossfade transitions: 700ms opacity + scale + transform
 - Parallax effects on role selection (mouse movement)
 - Shake animation on password error
@@ -148,6 +197,7 @@ Table: `grievances`
 - Smooth hover/scale effects on buttons
 
 ### Responsive Design
+
 - Tailwind breakpoints: Mobile-first, then `md:` for desktop
 - Touch-friendly buttons (large tap targets)
 - PWA-optimized with maskable icons
@@ -155,33 +205,48 @@ Table: `grievances`
 ## Common Development Tasks
 
 ### Adding a New Grievance Field
+
 1. Update Supabase table schema
-2. Add to `formData` state initialization (line 318)
-3. Add input in girlfriend view form (around line 762)
-4. Update `handleSubmit()` to include new field (line 490)
-5. Display in grievance cards (line 907, 993)
+2. Add to `formData` state initialization (App.jsx:280)
+3. Add input in girlfriend view form (around line 500)
+4. Update `handleSubmit()` to include new field (App.jsx:428)
+5. Display in grievance cards (around lines 620, 700)
 
-### Modifying Rate Limits
-Edit constants at top of App.js (lines 16-18):
+### Modifying Constants
+
+Edit `src/constants/config.js`:
 ```javascript
-const SUBMISSION_COOLDOWN = 30000;    // milliseconds
-const NOTIFICATION_COOLDOWN = 60000;
+export const SUBMISSION_COOLDOWN = 30000;     // milliseconds
+export const NOTIFICATION_COOLDOWN = 60000;
+export const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
+export const WARNING_TIME = 2 * 60 * 1000;
+export const MAX_TITLE_LENGTH = 200;
+export const MAX_DESCRIPTION_LENGTH = 2000;
 ```
 
-### Changing Inactivity Timeout
-Edit constants around line 342:
-```javascript
-const INACTIVITY_TIMEOUT = 15 * 60 * 1000;  // 15 minutes
-const WARNING_TIME = 2 * 60 * 1000;          // 2 minutes warning
-```
+All components importing these constants will automatically use the new values.
+
+### Creating New Utility Functions
+
+1. Add to appropriate file in `src/utils/`
+2. Export as named export
+3. Import where needed: `import { myFunction } from '../utils/myUtil'`
+
+### Adding New Components
+
+1. Create `.jsx` file in `src/components/`
+2. Use default export: `export default function MyComponent() { ... }`
+3. Import in App.jsx: `import MyComponent from './components/MyComponent'`
 
 ### Updating Patch Notes
+
 1. Edit `src/patchNotes.json`
 2. Run `npm run update:notes`
-3. Version format: `"X.Y"` (e.g., "1.3")
+3. Version format: `"X.Y"` (e.g., "2.0")
 4. Notes display in `<PatchNotes />` component on role selection
 
 ### Testing Discord Notifications
+
 When testing locally, Discord function will reject due to CORS (expects production domain). To test:
 1. Temporarily change CORS in `supabase/functions/notify-discord/index.ts` to allow localhost
 2. Deploy Edge Function update to Supabase
@@ -191,12 +256,17 @@ When testing locally, Discord function will reject due to CORS (expects producti
 ## Deployment
 
 ### Vercel (Recommended)
+
 1. Connect repo to Vercel
-2. Set environment variables in dashboard (Settings → Environment Variables)
-3. Auto-deploys on push to `main`
-4. Production URL must match CORS in Discord Edge Function
+2. **Update build settings**:
+   - Build Command: `vite build`
+   - Output Directory: `build`
+3. Set environment variables in dashboard (use `VITE_` prefix!)
+4. Auto-deploys on push to `main`
+5. Production URL must match CORS in Discord Edge Function
 
 ### Supabase Edge Functions
+
 ```bash
 # Deploy Discord notification function
 supabase functions deploy notify-discord
@@ -209,10 +279,22 @@ supabase secrets set DISCORD_WEBHOOK_URL=your-webhook-url
 
 ```
 src/
-  App.js              # Main application (all components)
-  index.js            # React entry point
-  index.css           # Global styles + Tailwind imports
-  patchNotes.json     # Version history data
+  components/
+    PasswordScreen.jsx
+    RoleSelection.jsx
+    PatchNotes.jsx
+    StackFade.jsx
+  utils/
+    sanitize.js
+    validate.js
+    rateLimit.js
+  constants/
+    config.js
+  services/
+    supabase.js
+  App.jsx              # Main application logic
+  main.jsx             # Vite entry point
+  index.css            # Global styles + Tailwind
 
 supabase/functions/
   notify-discord/
@@ -224,21 +306,26 @@ docs/
   features/           # Feature documentation (AFK timer)
 
 public/
-  index.html          # HTML template with CSP headers
+  index.html          # HTML template with CSP headers (moved from public/ in CRA)
   manifest.json       # PWA configuration
   icons/              # iOS and Android icons
 
 scripts/
-  update-patch-notes.js  # Syncs patchNotes.json to App.js
+  update-patch-notes.js  # Syncs patchNotes.json to App.jsx
+
+vite.config.js        # Vite configuration
+package.json          # Dependencies and scripts
 ```
 
 ## Testing
 
 ### Test Coverage
-- Basic smoke tests in `src/App.test.js`
+
+- Basic smoke tests in `src/App.test.jsx`
 - Manual testing checklist in `docs/security/SECURITY_IMPLEMENTATION_SUMMARY.md`
 
 ### Key Test Scenarios
+
 1. Password authentication (correct/incorrect)
 2. Role switching and transitions
 3. Grievance CRUD operations
@@ -251,22 +338,34 @@ scripts/
 ## Troubleshooting
 
 ### "No policies exist" error
+
 RLS is enabled but policies aren't set. Follow `docs/setup/SUPABASE_RLS_SETUP.md`
 
 ### Rate limiting not working
+
 Check localStorage keys: `lastSubmission`, `lastNotification`, `lastAttention`. Clear to reset.
 
 ### Transitions stuck
-The `transitioning` state lock prevents concurrent transitions. If stuck, check for errors in transition callbacks (setTimeout around lines 580-586).
+
+The `transitioning` state lock prevents concurrent transitions. If stuck, check for errors in transition callbacks (setTimeout around App.jsx:307-315, 320-325).
 
 ### Discord notifications not sending
+
 1. Verify `DISCORD_WEBHOOK_URL` secret in Supabase
 2. Check CORS settings in Edge Function
-3. Verify `REACT_APP_DISCORD_USER_ID` environment variable
+3. Verify `VITE_DISCORD_USER_ID` environment variable
 4. Check Supabase Edge Function logs
 
 ### Auto-logout not triggering
-Verify all event listeners are attached (line 399) and timers aren't being cleared prematurely. Check that `authenticated` is true.
+
+Verify all event listeners are attached (App.jsx:149) and timers aren't being cleared prematurely. Check that `authenticated` is true.
+
+### Build errors after changes
+
+1. Check for syntax errors
+2. Ensure all imports are correct
+3. Verify environment variables are set
+4. Run `npm run build` to see detailed errors
 
 ## Code Style & Conventions
 
@@ -274,8 +373,33 @@ Verify all event listeners are attached (line 399) and timers aren't being clear
 - **Tailwind classes** for all static styling
 - **DOMPurify sanitization** before any user content display
 - **Environment variables** for all secrets (never hardcode)
-- **Comments** mark removed features (e.g., "// Removed in v1.0")
-- **Event handlers** use arrow functions to preserve `this` context
+- **Named exports** for utilities, **default exports** for components
+- **Comments** explain "why", not "what"
+- **Constants** extracted to `src/constants/config.js`
+
+## Recent Major Changes (v2.0)
+
+### Vite Migration
+
+- ⚡ Build time: ~30s → ~1s (30x faster!)
+- 🔒 Vulnerabilities: 9 → 0
+- 🚀 Dev server startup: ~10s → ~1s
+- ✅ Modern tooling with active maintenance
+
+### Code Organization
+
+- 📁 Components extracted to `src/components/`
+- 🛠️ Utilities extracted to `src/utils/`
+- ⚙️ Constants extracted to `src/constants/`
+- 🔌 Services centralized in `src/services/`
+- 📉 App.jsx size: 1091 → 823 lines (-25%)
+
+### Bug Fixes
+
+- ✅ AFK timer dependency issue (useCallback)
+- ✅ Notification validation (empty form check)
+- ✅ Delete confirmation (prevents accidents)
+- ✅ Error handling (user-friendly messages)
 
 ## GitHub Workflow
 
