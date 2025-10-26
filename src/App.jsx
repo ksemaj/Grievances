@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { AlertCircle, Send, Trash2, RefreshCw, Sun, Moon, CheckCircle, Lock } from 'lucide-react';
 import DOMPurify from 'dompurify';
@@ -347,19 +347,19 @@ export default function GrievancePortal() {
   const warningTimerRef = useRef(null);
   const countdownIntervalRef = useRef(null);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     sessionStorage.removeItem('authenticated');
     setAuthenticated(false);
     setShowAfkWarning(false);
     setRole(null);
-  };
+  }, []);
 
-  const resetInactivityTimer = () => {
+  const resetInactivityTimer = useCallback(() => {
     // Clear existing timers
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    
+
     // Hide warning if it was showing
     setShowAfkWarning(false);
     setAfkCountdown(120);
@@ -370,7 +370,7 @@ export default function GrievancePortal() {
       warningTimerRef.current = setTimeout(() => {
         setShowAfkWarning(true);
         setAfkCountdown(120);
-        
+
         // Start countdown
         countdownIntervalRef.current = setInterval(() => {
           setAfkCountdown(prev => {
@@ -388,14 +388,14 @@ export default function GrievancePortal() {
         handleLogout();
       }, INACTIVITY_TIMEOUT);
     }
-  };
+  }, [authenticated, handleLogout]);
 
   // Track user activity
   useEffect(() => {
     if (!authenticated) return;
 
     const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
+
     activityEvents.forEach(event => {
       window.addEventListener(event, resetInactivityTimer);
     });
@@ -412,7 +412,7 @@ export default function GrievancePortal() {
       if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
-  }, [authenticated]);
+  }, [authenticated, resetInactivityTimer]);
 
   // Patch Notes component (static v1.3)
   const PatchNotes = () => (
@@ -534,6 +534,13 @@ export default function GrievancePortal() {
   };
 
   const deleteGrievance = async (id) => {
+    // Show confirmation dialog before deleting
+    const confirmed = window.confirm('Are you sure you want to delete this grievance? This action cannot be undone.');
+
+    if (!confirmed) {
+      return; // User cancelled
+    }
+
     const { error } = await supabase
       .from('grievances')
       .delete()
@@ -541,6 +548,8 @@ export default function GrievancePortal() {
 
     if (error) {
       console.error('Error deleting grievance:', error);
+      setValidationError('Failed to delete grievance. Please try again.');
+      setTimeout(() => setValidationError(''), 5000);
     } else {
       loadGrievances(); // Reload after deletion
     }
@@ -559,7 +568,9 @@ export default function GrievancePortal() {
       .update({ completed })
       .eq('id', id);
     if (error) {
-      alert("Failed to update grievance.\n\nSchema may be missing 'completed' boolean.");
+      console.error('Error updating grievance:', error);
+      setValidationError("Failed to update grievance. Please try again.");
+      setTimeout(() => setValidationError(''), 5000);
       return;
     }
     loadGrievances();
@@ -605,7 +616,15 @@ export default function GrievancePortal() {
 
   const notifyBoyfriend = async () => {
     if (sendingNotify) return;
-    
+
+    // Validate form data before sending notification
+    const errors = validateGrievance(formData.title, formData.description);
+    if (errors.length > 0) {
+      setValidationError('Please fill out the title and description before sending a notification.');
+      setTimeout(() => setValidationError(''), 5000);
+      return;
+    }
+
     // Check rate limit
     if (!checkRateLimit('lastNotification', NOTIFICATION_COOLDOWN)) {
       const remaining = getRemainingCooldown('lastNotification', NOTIFICATION_COOLDOWN);
@@ -637,7 +656,15 @@ export default function GrievancePortal() {
 
   const attentionPing = async () => {
     if (sendingAttention) return;
-    
+
+    // Validate form data before sending notification
+    const errors = validateGrievance(formData.title, formData.description);
+    if (errors.length > 0) {
+      setValidationError('Please fill out the title and description before sending an attention ping.');
+      setTimeout(() => setValidationError(''), 5000);
+      return;
+    }
+
     // Check rate limit
     if (!checkRateLimit('lastAttention', NOTIFICATION_COOLDOWN)) {
       const remaining = getRemainingCooldown('lastAttention', NOTIFICATION_COOLDOWN);
