@@ -24,11 +24,6 @@ npm run preview          # Preview production build
 npm test -- App.test.jsx  # Run specific test file
 ```
 
-### Utility Scripts
-```bash
-npm run update:notes     # Update patch notes from patchNotes.json
-```
-
 ## Environment Setup
 
 Create `.env.local` with required variables:
@@ -268,9 +263,10 @@ All components importing these constants will automatically use the new values.
 ### Updating Patch Notes
 
 1. Edit `src/patchNotes.json`
-2. Run `npm run update:notes`
-3. Version format: `"X.Y"` (e.g., "2.0")
-4. Notes display in `<PatchNotes />` component on role selection
+2. Add new version to the top of the `versions` array
+3. Version format: `"X.Y"` (e.g., "2.2")
+4. Notes display dynamically in `<PatchNotes />` component on role selection
+5. Current version is always expanded, previous versions are collapsible
 
 ### Testing Discord Notifications
 
@@ -338,9 +334,6 @@ public/
   icons/              # iOS and Android icons
   logo192.png         # PWA icon 192x192
   logo512.png         # PWA icon 512x512
-
-scripts/
-  update-patch-notes.js  # Syncs patchNotes.json to App.jsx
 
 index.html            # Vite HTML entry point (root directory)
 postcss.config.js     # PostCSS configuration (required for Tailwind)
