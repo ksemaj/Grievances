@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A lightweight React PWA for submitting and managing grievances between two users ("Bug" and "James"). Features shared password authentication, auto-logout timer, Discord notifications, dual role views, and comprehensive security hardening.
+A lightweight React PWA for submitting and managing grievances between two users ("Bug" and "James"). Features shared password authentication, auto-logout timer, Discord notifications, dual role views, real-time sync, and comprehensive security hardening.
 
 **Tech Stack**: React 19, **Vite 7** ⚡, Tailwind CSS, Supabase (Postgres + Edge Functions), DOMPurify, Lucide icons
 
@@ -118,13 +118,25 @@ All state is component-local using React hooks. No Redux/Context needed:
 
 ### Data Flow
 
+**Initial Load:**
 ```
 Supabase DB (grievances table)
-    ↓ loadGrievances()
+    ↓ loadGrievances() (on mount)
     ↓ setGrievances()
     ↓ Split by completed status
     ↓ Render active/completed sections
 ```
+
+**Real-Time Updates (v2.2):**
+```
+Supabase Real-Time Channel
+    ↓ Subscribe to postgres_changes
+    ↓ Listen for INSERT/UPDATE/DELETE
+    ↓ Automatically update grievances state
+    ↓ UI updates instantly across all connected users
+```
+
+The app uses Supabase real-time subscriptions to keep all users in sync. When Bug submits a grievance, James sees it instantly. When James marks one complete, Bug sees the update immediately. Manual refresh buttons remain as fallback, but are rarely needed.
 
 ### Crossfade Transition System
 
@@ -407,9 +419,17 @@ If the app loads but has no styling (plain unstyled HTML):
 - **Comments** explain "why", not "what"
 - **Constants** extracted to `src/constants/config.js`
 
-## Recent Major Changes (v2.0)
+## Recent Major Changes
 
-### Vite Migration
+### Real-Time Sync (v2.2)
+
+- 🔄 Supabase real-time subscriptions for instant updates
+- ⚡ Grievances sync automatically across all connected users
+- 👥 No manual refresh needed - changes appear instantly
+- 🔌 Uses postgres_changes event listening
+- 📡 Listens for INSERT, UPDATE, DELETE operations
+
+### Vite Migration (v2.0-2.1)
 
 - ⚡ Build time: ~30s → ~1s (30x faster!)
 - 🔒 Vulnerabilities: 9 → 0
