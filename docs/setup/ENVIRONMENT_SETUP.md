@@ -8,14 +8,14 @@ You need to create a `.env.local` file in the root of your project with the foll
 
 ```bash
 # Supabase Configuration
-REACT_APP_SUPABASE_URL=your-supabase-project-url
-REACT_APP_SUPABASE_ANON_KEY=your-supabase-anon-key
+VITE_SUPABASE_URL=your-supabase-project-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 # Password Protection
-REACT_APP_ACCESS_PASSWORD=choose-a-strong-password
+VITE_ACCESS_PASSWORD=choose-a-strong-password
 
 # Discord User ID
-REACT_APP_DISCORD_USER_ID=217849233133404161
+VITE_DISCORD_USER_ID=217849233133404161
 ```
 
 ## How to Set Up
@@ -29,14 +29,14 @@ In the project root directory, create a file named `.env.local` (note the dot at
 1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
 2. Select your project
 3. Go to **Settings** → **API**
-4. Copy the **Project URL** → paste as `REACT_APP_SUPABASE_URL`
-5. Copy the **anon public** key → paste as `REACT_APP_SUPABASE_ANON_KEY`
+4. Copy the **Project URL** → paste as `VITE_SUPABASE_URL`
+5. Copy the **anon public** key → paste as `VITE_SUPABASE_ANON_KEY`
 
 ### 3. Set a Password
 
 Choose a strong password that both you and your girlfriend will use to access the portal. This is your first line of defense.
 
-**Example**: `REACT_APP_ACCESS_PASSWORD=MySecurePassword123!`
+**Example**: `VITE_ACCESS_PASSWORD=MySecurePassword123!`
 
 ### 4. Configure Discord User ID
 
@@ -49,10 +49,10 @@ The Discord user ID is already set to James's ID. To find other Discord user IDs
 ## Example `.env.local` File
 
 ```bash
-REACT_APP_SUPABASE_URL=https://abcdefghijk.supabase.co
-REACT_APP_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3BxcnN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2MjE1Njc4OTAsImV4cCI6MTkzNzE0Mzg5MH0.example-key-here
-REACT_APP_ACCESS_PASSWORD=GrievancePortal2024!
-REACT_APP_DISCORD_USER_ID=217849233133404161
+VITE_SUPABASE_URL=https://abcdefghijk.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3BxcnN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2MjE1Njc4OTAsImV4cCI6MTkzNzE0Mzg5MH0.example-key-here
+VITE_ACCESS_PASSWORD=GrievancePortal2024!
+VITE_DISCORD_USER_ID=217849233133404161
 ```
 
 ## For Production (Vercel)
@@ -62,7 +62,7 @@ After deploying to Vercel, you need to add these same environment variables:
 1. Go to your Vercel project dashboard
 2. Navigate to **Settings** → **Environment Variables**
 3. Add each variable:
-   - Name: `REACT_APP_SUPABASE_URL`
+   - Name: `VITE_SUPABASE_URL`
    - Value: your Supabase URL
    - Click **Add**
 4. Repeat for all 4 variables
@@ -73,13 +73,13 @@ After deploying to Vercel, you need to add these same environment variables:
 - **NEVER commit `.env.local` to git** - it's already in `.gitignore`
 - **NEVER share your anon key publicly** - it's in the environment variables, not the code
 - **Choose a strong password** - at least 12 characters with mixed case, numbers, and symbols
-- After creating `.env.local`, **restart your development server** (`npm start`)
+- After creating `.env.local`, **restart your development server** (`npm run dev`)
 
 ## Troubleshooting
 
 ### "Password not configured" error
 
-This means `REACT_APP_ACCESS_PASSWORD` is not set. Make sure:
+This means `VITE_ACCESS_PASSWORD` is not set. Make sure:
 1. You created `.env.local` in the project root (same level as `package.json`)
 2. The variable name is spelled exactly right
 3. You restarted the dev server after creating the file
@@ -101,8 +101,8 @@ Check that:
 
 After setting up environment variables:
 
-1. Run `npm install` to install new dependencies (DOMPurify)
-2. Run `npm start` to test locally
+1. Run `npm install` to install dependencies
+2. Run `npm run dev` to test locally
 3. Test the password screen
 4. Try submitting a grievance
 5. Deploy to Vercel and add environment variables there

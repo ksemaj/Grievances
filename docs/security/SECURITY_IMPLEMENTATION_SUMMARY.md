@@ -32,7 +32,7 @@ Successfully implemented comprehensive security hardening for the Grievance Port
 
 **Changes**:
 - Created `PasswordScreen` component with elegant UI matching app design
-- Password stored in environment variable (`REACT_APP_ACCESS_PASSWORD`)
+- Password stored in environment variable (`VITE_ACCESS_PASSWORD`)
 - Uses sessionStorage to persist authentication (no re-login on refresh)
 - Shake animation on incorrect password
 - Password check happens before any other content loads
@@ -77,7 +77,7 @@ Successfully implemented comprehensive security hardening for the Grievance Port
 
 **Changes**:
 - Moved hardcoded Discord user ID to environment variable
-- Now uses: `process.env.REACT_APP_DISCORD_USER_ID`
+- Now uses: `import.meta.env.VITE_DISCORD_USER_ID`
 - ID no longer visible in source code or browser DevTools
 
 **Security Benefit**: Keeps sensitive IDs private and easier to manage
@@ -183,15 +183,15 @@ npm install
 ### 2. Create Local Environment File
 Create `.env.local` with:
 ```bash
-REACT_APP_SUPABASE_URL=your-supabase-url
-REACT_APP_SUPABASE_ANON_KEY=your-anon-key
-REACT_APP_ACCESS_PASSWORD=choose-strong-password
-REACT_APP_DISCORD_USER_ID=217849233133404161
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_ACCESS_PASSWORD=choose-strong-password
+VITE_DISCORD_USER_ID=217849233133404161
 ```
 
 ### 3. Test Locally
 ```bash
-npm start
+npm run dev
 ```
 
 Test all features:

@@ -11,10 +11,10 @@ npm install
 Create a file named `.env.local` in the project root:
 
 ```bash
-REACT_APP_SUPABASE_URL=https://zyueyefahxfcccdgggpe.supabase.co
-REACT_APP_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dWV5ZWZhaHhmY2NjZGdnZ3BlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5NzU2NDgsImV4cCI6MjA3NTU1MTY0OH0.m-eWD3cP6U_753yY8XU9z_W-lH4LMQT9G1GOyME3lV8
-REACT_APP_ACCESS_PASSWORD=baby
-REACT_APP_DISCORD_USER_ID=217849233133404161
+VITE_SUPABASE_URL=https://zyueyefahxfcccdgggpe.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dWV5ZWZhaHhmY2NjZGdnZ3BlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5NzU2NDgsImV4cCI6MjA3NTU1MTY0OH0.m-eWD3cP6U_753yY8XU9z_W-lH4LMQT9G1GOyME3lV8
+VITE_ACCESS_PASSWORD=baby
+VITE_DISCORD_USER_ID=217849233133404161
 ```
 
 **Where to find these:**
@@ -24,7 +24,7 @@ REACT_APP_DISCORD_USER_ID=217849233133404161
 
 ### Step 3: Start Development Server (1 min)
 ```bash
-npm start
+npm run dev
 ```
 
 The app will open at http://localhost:3000
@@ -70,7 +70,7 @@ Your portal now has:
 
 **"Password not configured" error**
 - Make sure `.env.local` exists in project root
-- Check spelling: `REACT_APP_ACCESS_PASSWORD`
+- Check spelling: `VITE_ACCESS_PASSWORD`
 - Restart dev server after creating `.env.local`
 
 **Can't connect to Supabase**

@@ -15,7 +15,7 @@ A lightweight React app where Bug submits grievances and James manages them, wit
 - 🛡️ Content Security Policy and CORS protection
 
 ## Tech stack
-- React + Tailwind CSS
+- React 19 + Vite 7 + Tailwind CSS
 - Supabase (Postgres + Edge Functions)
 - Lucide icons
 
@@ -28,16 +28,16 @@ A lightweight React app where Bug submits grievances and James manages them, wit
    - See [`docs/setup/ENVIRONMENT_SETUP.md`](docs/setup/ENVIRONMENT_SETUP.md) for detailed instructions
    - Create `.env.local` with:
      ```bash
-     REACT_APP_SUPABASE_URL=your-url
-     REACT_APP_SUPABASE_ANON_KEY=your-anon-key
-     REACT_APP_ACCESS_PASSWORD=your-password
-     REACT_APP_DISCORD_USER_ID=your-discord-id
+     VITE_SUPABASE_URL=your-url
+     VITE_SUPABASE_ANON_KEY=your-anon-key
+     VITE_ACCESS_PASSWORD=your-password
+     VITE_DISCORD_USER_ID=your-discord-id
      ```
 3. Set up database security
    - Follow [`docs/setup/SUPABASE_RLS_SETUP.md`](docs/setup/SUPABASE_RLS_SETUP.md) to enable Row-Level Security
 4. Run dev server
    ```bash
-   npm start
+   npm run dev
    ```
 
 ## Supabase function
