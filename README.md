@@ -1,6 +1,6 @@
 # Grievance Portal
 
-A lightweight React PWA for submitting and managing grievances. Built with React 19, Vite 7, Tailwind CSS, and Supabase.
+A lightweight React app for submitting and managing grievances. Built with React 19, Vite 7, Tailwind CSS, and Supabase.
 
 ## Overview
 
